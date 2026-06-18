@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéBattle - Pick Pokémon</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+</head>
+<body data-page="battle-home">
+<div class="page" id="battle-home">
+  <nav>
+    <div class="nav-logo"><div class="nav-logo-icon">⚔️</div><span class="nav-logo-text">PokéBattle</span></div>
+    <div class="nav-links">
+      <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home" aria-hidden="true"></i> Home</button>
+      <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book" aria-hidden="true"></i> Collection</button>
+      <button class="nav-link active" onclick="goTo('battle-home')"><i class="ti ti-sword" aria-hidden="true"></i> Battle</button>
+      <button class="nav-link" onclick="goTo('inventory')"><i class="ti ti-package" aria-hidden="true"></i> Inventory</button>
+    </div>
+    <div class="nav-right">
+      <div class="badge-trainer">⭐ Admin12345</div>
+      <button class="btn-logout" onclick="goTo('login')"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
+    </div>
+  </nav>
+  <div class="page-content">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;cursor:pointer;color:var(--text3);font-size:12px" onclick="goTo('home')">
+      <i class="ti ti-arrow-left" aria-hidden="true"></i> Kembali
+    </div>
+    <div class="page-header">
+      <div class="page-title" style="color:var(--accent)">Pilih Pokémon untuk Battle</div>
+      <div class="page-sub">Lawan: Agumon — pilih Pokémon andalanmu!</div>
+    </div>
+    <div class="battle-pick-grid" id="battle-pick-grid">
+      <!-- Injected by JS -->
+    </div>
+    <div style="text-align:center;margin-top:24px">
+      <button class="btn btn-red btn-lg" onclick="goTo('battle-ingame')">⚔️ Mulai Battle!</button>
+    </div>
+  </div>
+</div>
+<script src="/js/main.js"></script>
+</body>
+</html>
