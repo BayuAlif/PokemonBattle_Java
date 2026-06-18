@@ -19,12 +19,33 @@ public class InitDB {
                                 "username TEXT UNIQUE, " +
                                 "password TEXT);";
         
+        // Query Tabel Item (Katalog semua barang di dalam game)
+        String createItemTableSQL = "CREATE TABLE IF NOT EXISTS item (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                                "name TEXT UNIQUE, " +
+                                "description TEXT, " +
+                                "effect_value INTEGER, " +
+                                "type TEXT);"; // tipe item: HEAL, CATCH, dll
+
+        // Query Tabel Inventory (Tas milik masing-masing user)
+        String createInventoryTableSQL = "CREATE TABLE IF NOT EXISTS user_inventory (" +
+                                "user_id INTEGER, " +
+                                "item_id INTEGER, " +
+                                "quantity INTEGER DEFAULT 0, " +
+                                "PRIMARY KEY (user_id, item_id), " +
+                                "FOREIGN KEY (user_id) REFERENCES users(id), " +
+                                "FOREIGN KEY (item_id) REFERENCES item(id));";
+
         try (Connection conn = Database.getConnection();
              Statement stmt = conn.createStatement()) {
             
-            // Eksekusi pembuatan kedua tabel
+            stmt.execute("PRAGMA foreign_keys = ON;");//agar tas ndak nyasar ke user ghaib
+
+            // Eksekusi pembuatan tabel
             stmt.execute(createPokemonTableSQL);
             stmt.execute(createUsersTableSQL);
+            stmt.execute(createItemTableSQL);
+            stmt.execute(createInventoryTableSQL);
             
             // Cek data seeding pokemon (agar tetap terisi 100 pokemon bawaanmu)
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM pokemon");
@@ -164,6 +185,34 @@ public class InitDB {
                 System.out.println(">>> Sukses menyuntikkan 100 Pokémon ke pokemon_game.db! <<<");
             } else {
                 System.out.println(">>> Database sudah terisi, melewati proses seeding. <<<");
+            }
+
+            // SEEDING DATA ITEM (MASTER BARANG SAJA)
+            ResultSet rsItem = stmt.executeQuery("SELECT COUNT(*) FROM item");
+            if (rsItem.next() && rsItem.getInt(1) == 0) {
+                System.out.println(">>> Mengisi database dengan 3 Item dasar... <<<");
+                
+                String insertItemSQL = "INSERT INTO item (name, description, effect_value, type) VALUES (?, ?, ?, ?)";
+                
+                try (PreparedStatement pstmtItem = conn.prepareStatement(insertItemSQL)) {
+                    Object[][] itemData = {
+                        {"Potion", "Mengembalikan 50 HP", 50, "HEAL"},
+                        {"Pokeball", "Bola standar untuk menangkap Pokemon", 1, "CATCH"},
+                        {"Revive", "Menghidupkan Pokemon yang pingsan", 50, "REVIVE"}
+                    };
+                    
+                    for (Object[] i : itemData) {
+                        pstmtItem.setString(1, (String) i[0]);
+                        pstmtItem.setString(2, (String) i[1]);
+                        pstmtItem.setInt(3, (int) i[2]);
+                        pstmtItem.setString(4, (String) i[3]);
+                        pstmtItem.addBatch();
+                    }
+                    pstmtItem.executeBatch();
+                }
+                System.out.println(">>> Sukses menyuntikkan 3 Item ke database! <<<");
+            } else {
+                System.out.println(">>> Database Item sudah terisi, melewati proses seeding. <<<");
             }
             
             System.out.println(">>> SQLite & Struktur Tabel Users Berhasil Diaktifkan! <<<");
