@@ -36,6 +36,14 @@ public class InitDB {
                                 "FOREIGN KEY (user_id) REFERENCES users(id), " +
                                 "FOREIGN KEY (item_id) REFERENCES item(id));";
 
+        // Query Tabel Skill/Moveset
+        String createSkillTableSQL = "CREATE TABLE IF NOT EXISTS skill (" +
+                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                                "name TEXT UNIQUE, " +
+                                "type TEXT, " +
+                                "power INTEGER, " +
+                                "accuracy INTEGER);";
+
         try (Connection conn = Database.getConnection();
              Statement stmt = conn.createStatement()) {
             
@@ -46,6 +54,7 @@ public class InitDB {
             stmt.execute(createUsersTableSQL);
             stmt.execute(createItemTableSQL);
             stmt.execute(createInventoryTableSQL);
+            stmt.execute(createSkillTableSQL);
             
             // Cek data seeding pokemon (agar tetap terisi 100 pokemon bawaanmu)
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM pokemon");
@@ -197,6 +206,7 @@ public class InitDB {
                 try (PreparedStatement pstmtItem = conn.prepareStatement(insertItemSQL)) {
                     Object[][] itemData = {
                         {"Potion", "Mengembalikan 50 HP", 50, "HEAL"},
+                        {"Mini Potion", "Mengembalikan 20 HP", 20, "HEAL"},
                         {"Pokeball", "Bola standar untuk menangkap Pokemon", 1, "CATCH"},
                         {"Revive", "Menghidupkan Pokemon yang pingsan", 50, "REVIVE"}
                     };
@@ -210,11 +220,159 @@ public class InitDB {
                     }
                     pstmtItem.executeBatch();
                 }
-                System.out.println(">>> Sukses menyuntikkan 3 Item ke database! <<<");
+                System.out.println(">>> Sukses menyuntikkan Item ke database! <<<");
             } else {
                 System.out.println(">>> Database Item sudah terisi, melewati proses seeding. <<<");
             }
             
+            // SEEDING DATA SKILL / MOVESET
+            ResultSet rsSkill = stmt.executeQuery("SELECT COUNT(*) FROM skill");
+            if (rsSkill.next() && rsSkill.getInt(1) == 0) {
+                System.out.println(">>> Mengisi database dengan 120 Moveset... <<<");
+                String insertSkillSQL = "INSERT INTO skill (name, type, power, accuracy) VALUES (?, ?, ?, ?)";
+                try (PreparedStatement pstmtSkill = conn.prepareStatement(insertSkillSQL)) {
+                    Object[][] skillData = {
+                        // FIRE (20)
+                        {"Ember","FIRE",40,100}, 
+                        {"Flamethrower","FIRE",90,100}, 
+                        {"Fire Blast","FIRE",110,85}, 
+                        {"Flame Wheel","FIRE",60,100}, 
+                        {"Fire Punch","FIRE",75,100}, 
+                        {"Flare Blitz","FIRE",120,100}, 
+                        {"Heat Wave","FIRE",95,90}, 
+                        {"Overheat","FIRE",130,90}, 
+                        {"Fire Fang","FIRE",65,95}, 
+                        {"Flame Charge","FIRE",50,100}, 
+                        {"Lava Plume","FIRE",80,100}, 
+                        {"Magma Storm","FIRE",100,75}, 
+                        {"Blast Burn","FIRE",150,90}, 
+                        {"Eruption","FIRE",150,100}, 
+                        {"Mystical Fire","FIRE",75,100}, 
+                        {"Incinerate","FIRE",60,100}, 
+                        {"Inferno","FIRE",100,50}, 
+                        {"Flame Burst","FIRE",70,100}, 
+                        {"Sacred Fire","FIRE",100,95}, 
+                        {"V-create","FIRE",180,95},
+                        // WATER (20)
+                        {"Water Gun","WATER",40,100}, 
+                        {"Water Pulse","WATER",60,100}, 
+                        {"Bubble Beam","WATER",65,100}, 
+                        {"Surf","WATER",90,100}, 
+                        {"Hydro Pump","WATER",110,80}, 
+                        {"Waterfall","WATER",80,100}, 
+                        {"Aqua Jet","WATER",40,100}, 
+                        {"Aqua Tail","WATER",90,90}, 
+                        {"Dive","WATER",80,100}, 
+                        {"Crabhammer","WATER",100,90}, 
+                        {"Clamp","WATER",35,85}, 
+                        {"Whirlpool","WATER",35,85}, 
+                        {"Water Spout","WATER",150,100}, 
+                        {"Muddy Water","WATER",90,85}, 
+                        {"Brine","WATER",65,100}, 
+                        {"Scald","WATER",80,100}, 
+                        {"Origin Pulse","WATER",110,85}, 
+                        {"Steam Eruption","WATER",110,95}, 
+                        {"Razor Shell","WATER",75,95}, 
+                        {"Snipe Shot","WATER",80,100},
+                        // GRASS (20)
+                        {"Vine Whip","GRASS",45,100}, 
+                        {"Razor Leaf","GRASS",55,95}, 
+                        {"Solar Beam","GRASS",120,100}, 
+                        {"Giga Drain","GRASS",75,100}, 
+                        {"Magical Leaf","GRASS",60,100}, 
+                        {"Bullet Seed","GRASS",25,100}, 
+                        {"Seed Bomb","GRASS",80,100}, 
+                        {"Wood Hammer","GRASS",120,100}, 
+                        {"Leaf Blade","GRASS",90,100}, 
+                        {"Energy Ball","GRASS",90,100}, 
+                        {"Leaf Storm","GRASS",130,90}, 
+                        {"Petal Dance","GRASS",120,100}, 
+                        {"Frenzy Plant","GRASS",150,90}, 
+                        {"Grass Knot","GRASS",80,100}, 
+                        {"Power Whip","GRASS",120,85}, 
+                        {"Trop Kick","GRASS",70,100}, 
+                        {"Solar Blade","GRASS",125,100}, 
+                        {"Apple Acid","GRASS",80,100}, 
+                        {"Drum Beating","GRASS",80,100}, 
+                        {"Leaf Tornado","GRASS",65,90},
+                        // ELECTRIC (20)
+                        {"Thunder Shock","ELECTRIC",40,100}, 
+                        {"Thunderbolt","ELECTRIC",90,100}, 
+                        {"Thunder","ELECTRIC",110,70}, 
+                        {"Volt Tackle","ELECTRIC",120,100}, 
+                        {"Spark","ELECTRIC",65,100}, 
+                        {"Thunder Punch","ELECTRIC",75,100}, 
+                        {"Shock Wave","ELECTRIC",60,100}, 
+                        {"Discharge","ELECTRIC",80,100}, 
+                        {"Charge Beam","ELECTRIC",50,90}, 
+                        {"Wild Charge","ELECTRIC",90,100}, 
+                        {"Zap Cannon","ELECTRIC",120,50}, 
+                        {"Volt Switch","ELECTRIC",70,100}, 
+                        {"Electroweb","ELECTRIC",55,95}, 
+                        {"Nuzzle","ELECTRIC",20,100}, 
+                        {"Zing Zap","ELECTRIC",80,100}, 
+                        {"Aura Wheel","ELECTRIC",110,100}, 
+                        {"Overdrive","ELECTRIC",80,100}, 
+                        {"Plasma Fists","ELECTRIC",100,100}, 
+                        {"Bolt Strike","ELECTRIC",130,85}, 
+                        {"Fusion Bolt","ELECTRIC",100,100},
+                        // ICE (20)
+                        {"Powder Snow","ICE",40,100}, 
+                        {"Ice Beam","ICE",90,100}, 
+                        {"Blizzard","ICE",110,70}, 
+                        {"Ice Punch","ICE",75,100}, 
+                        {"Aurora Beam","ICE",65,100}, 
+                        {"Ice Shard","ICE",40,100}, 
+                        {"Ice Fang","ICE",65,95}, 
+                        {"Avalanche","ICE",60,100}, 
+                        {"Icicle Crash","ICE",85,90}, 
+                        {"Freeze-Dry","ICE",70,100}, 
+                        {"Glaciate","ICE",65,95}, 
+                        {"Frost Breath","ICE",60,90}, 
+                        {"Ice Burn","ICE",140,90}, 
+                        {"Icicle Spear","ICE",25,100}, 
+                        {"Icy Wind","ICE",55,95}, 
+                        {"Ice Hammer","ICE",100,90}, 
+                        {"Triple Axel","ICE",20,90}, 
+                        {"Mountain Gale","ICE",100,85}, 
+                        {"Glacial Lance","ICE",120,100}, 
+                        {"Subzero Slammer","ICE",175,100},
+                        // POISON (20)
+                        {"Poison Sting","POISON",15,100}, 
+                        {"Sludge","POISON",65,100}, 
+                        {"Sludge Bomb","POISON",90,100}, 
+                        {"Sludge Wave","POISON",95,100}, 
+                        {"Poison Jab","POISON",80,100}, 
+                        {"Gunk Shot","POISON",120,80}, 
+                        {"Poison Fang","POISON",50,100}, 
+                        {"Cross Poison","POISON",70,100}, 
+                        {"Clear Smog","POISON",50,100}, 
+                        {"Venoshock","POISON",65,100}, 
+                        {"Acid","POISON",40,100}, 
+                        {"Acid Spray","POISON",40,100}, 
+                        {"Belch","POISON",120,90}, 
+                        {"Smog","POISON",30,70}, 
+                        {"Poison Tail","POISON",50,100}, 
+                        {"Gastro Acid","POISON",40,100}, 
+                        {"Mortal Spin","POISON",30,100}, 
+                        {"Shell Side Arm","POISON",90,100}, 
+                        {"Dire Claw","POISON",80,100}, 
+                        {"Venom Drench","POISON",60,100}
+                    };
+                    for (Object[] s : skillData) {
+                        pstmtSkill.setString(1, (String) s[0]);
+                        pstmtSkill.setString(2, (String) s[1]);
+                        pstmtSkill.setInt(3, (int) s[2]);
+                        pstmtSkill.setInt(4, (int) s[3]);
+                        pstmtSkill.addBatch();
+                    }
+                    pstmtSkill.executeBatch();
+                }
+                System.out.println(">>> Sukses menyuntikkan 120 Moveset ke pokemon_game.db! <<<");
+            } else {
+                System.out.println(">>> Database Skill sudah terisi, melewati proses seeding. <<<");
+            }
+
             System.out.println(">>> SQLite & Struktur Tabel Users Berhasil Diaktifkan! <<<");
         } catch (Exception e) {
             System.err.println("Gagal menginisialisasi database: " + e.getMessage());
