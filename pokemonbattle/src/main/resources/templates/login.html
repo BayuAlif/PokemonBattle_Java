@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PokéBattle - Login & Register</title>
+  <title>PokéBattle - Login</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   
@@ -16,7 +16,6 @@
       padding: 20px;
     }
     .auth-card {
-      /* Menyesuaikan dengan vibe dark mode dari class yang sudah ada */
       background: rgba(30, 30, 30, 0.6); 
       border: 1px solid var(--accent, #555);
       border-radius: 12px;
@@ -61,7 +60,7 @@
     }
   </style>
 </head>
-<body data-page="auth">
+<body data-page="login">
 
 <div class="auth-wrapper">
   
@@ -81,49 +80,12 @@
       <i class="ti ti-login" aria-hidden="true"></i> Masuk
     </button>
 
-    <div class="auth-toggle" onclick="toggleAuth('register')">
+    <div class="auth-toggle" onclick="goTo('register')">
       Belum punya lisensi Trainer? Daftar di sini.
     </div>
   </div>
 
-  <div class="auth-card" id="form-register" style="display: none;">
-    <div class="logo-container">
-      <div class="nav-logo-icon" style="font-size: 28px;">⚔️</div>
-      <span class="nav-logo-text" style="font-size: 24px; font-weight: bold;">PokéBattle</span>
-    </div>
-    
-    <div class="page-title" style="color:var(--accent); font-size: 20px;">Daftar Trainer Baru</div>
-    <div class="page-sub" style="margin-bottom: 24px; font-size: 14px;">Klaim starter Pokémon-mu sekarang!</div>
-
-    <input type="text" class="auth-input" placeholder="Nama Trainer" id="reg-username">
-    <input type="password" class="auth-input" placeholder="Password" id="reg-password">
-    <input type="password" class="auth-input" placeholder="Konfirmasi Password" id="reg-pass-confirm">
-
-    <button class="btn btn-red btn-lg" style="width: 100%; justify-content: center;" onclick="toggleAuth('login')">
-      <i class="ti ti-user-plus" aria-hidden="true"></i> Buat Akun
-    </button>
-
-    <div class="auth-toggle" onclick="toggleAuth('login')">
-      Sudah punya akun? Masuk di sini.
-    </div>
-  </div>
-
 </div>
-
-<script>
-  function toggleAuth(type) {
-    const formLogin = document.getElementById('form-login');
-    const formRegister = document.getElementById('form-register');
-    
-    if (type === 'register') {
-      formLogin.style.display = 'none';
-      formRegister.style.display = 'block';
-    } else {
-      formRegister.style.display = 'none';
-      formLogin.style.display = 'block';
-    }
-  }
-</script>
 
 <script src="/js/main.js"></script>
 </body>

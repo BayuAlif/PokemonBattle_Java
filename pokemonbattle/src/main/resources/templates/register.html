@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéBattle - Register</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  
+  <style>
+    .auth-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .auth-card {
+      background: rgba(30, 30, 30, 0.6); 
+      border: 1px solid var(--accent, #555);
+      border-radius: 12px;
+      padding: 40px 30px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    .auth-input {
+      width: 100%;
+      padding: 12px 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #222;
+      color: white;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .auth-input:focus {
+      outline: none;
+      border-color: var(--accent, #ff5e5e);
+    }
+    .auth-toggle {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text3, #aaa);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .auth-toggle:hover {
+      color: var(--accent, #ff5e5e);
+      text-decoration: underline;
+    }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 25px;
+    }
+  </style>
+</head>
+<body data-page="register">
+
+<div class="auth-wrapper">
+  
+  <div class="auth-card" id="form-register">
+    <div class="logo-container">
+      <div class="nav-logo-icon" style="font-size: 28px;">⚔️</div>
+      <span class="nav-logo-text" style="font-size: 24px; font-weight: bold;">PokéBattle</span>
+    </div>
+    
+    <div class="page-title" style="color:var(--accent); font-size: 20px;">Daftar Trainer Baru</div>
+    <div class="page-sub" style="margin-bottom: 24px; font-size: 14px;">Klaim starter Pokémon-mu sekarang!</div>
+
+    <input type="text" class="auth-input" placeholder="Nama Trainer" id="reg-username">
+    <input type="password" class="auth-input" placeholder="Password" id="reg-password">
+    <input type="password" class="auth-input" placeholder="Konfirmasi Password" id="reg-pass-confirm">
+
+    <button class="btn btn-red btn-lg" style="width: 100%; justify-content: center;" onclick="goTo('login')">
+      <i class="ti ti-user-plus" aria-hidden="true"></i> Buat Akun
+    </button>
+
+    <div class="auth-toggle" onclick="goTo('login')">
+      Sudah punya lisensi Trainer? Masuk di sini.
+    </div>
+  </div>
+
+</div>
+
+<script src="/js/main.js"></script>
+</body>
+</html>
