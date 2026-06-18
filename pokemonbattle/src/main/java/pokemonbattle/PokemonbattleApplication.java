@@ -1,6 +1,6 @@
 package pokemonbattle;
 
-import org.springframework.boot.SpringApplication; // Import disesuaikan dengan package baru kamu
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import pokemonbattle.database.InitDB;

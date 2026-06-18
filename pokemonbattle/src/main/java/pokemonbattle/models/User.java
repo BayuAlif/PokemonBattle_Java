@@ -1,4 +1,4 @@
-package pokemonbattle.model;
+package pokemonbattle.models;
 
 public class User {
     private int id;
