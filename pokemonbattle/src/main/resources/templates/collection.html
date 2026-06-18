@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéBattle - Collection</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+</head>
+
+<body data-page="collection">
+  <div class="page" id="collection-page">
+    <nav>
+      <div class="nav-logo">
+        <div class="nav-logo-icon">📖</div><span class="nav-logo-text">PokéBattle</span>
+      </div>
+      <div class="nav-links">
+        <a class="nav-link" th:href="@{/home}"><i class="ti ti-home" aria-hidden="true"></i> Home</a>
+        <a class="nav-link active" th:href="@{/collection}"><i class="ti ti-book" aria-hidden="true"></i> Collection</a>
+        <a class="nav-link" th:href="@{/battle-home}"><i class="ti ti-sword" aria-hidden="true"></i> Battle</a>
+        <a class="nav-link" th:href="@{/inventory}"><i class="ti ti-package" aria-hidden="true"></i> Inventory</a>
+      </div>
+      <div class="nav-right">
+        <button class="btn-logout" onclick="handleLogout()"><i class="ti ti-logout" aria-hidden="true"></i>
+          Logout</button>
+      </div>
+    </nav>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div class="page-title" style="color:var(--accent)">Koleksi Pokémon</div>
+        <div class="page-sub">Daftar semua Pokémon yang berhasil kamu kumpulkan dan latih!</div>
+      </div>
+
+      <div class="collection-grid" id="collection-grid"
+        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+        <p style="color: var(--text3);">Memuat koleksi Pokémon...</p>
+      </div>
+    </div>
+  </div>
+
+  <script th:src="@{/js/main.js}"></script>
+  <script>
+    // Pemicu otomatis dari halaman HTML saat DOM selesai di-render
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof fetchCollectionData === 'function') {
+        fetchCollectionData();
+      }
+    });
+  </script>
+</body>
+</html>

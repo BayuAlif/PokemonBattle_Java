@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PokéBattle - Inventory</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" th:href="@{/css/style.css}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 </head>
 <body data-page="inventory">
@@ -12,13 +12,13 @@
   <nav>
     <div class="nav-logo"><div class="nav-logo-icon">🎒</div><span class="nav-logo-text">PokéBattle</span></div>
     <div class="nav-links">
-      <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home" aria-hidden="true"></i> Home</button>
-      <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book" aria-hidden="true"></i> Collection</button>
-      <button class="nav-link" onclick="goTo('battle-home')"><i class="ti ti-sword" aria-hidden="true"></i> Battle</button>
-      <button class="nav-link active" onclick="goTo('inventory')"><i class="ti ti-package" aria-hidden="true"></i> Inventory</button>
+      <a class="nav-link" th:href="@{/home}"><i class="ti ti-home" aria-hidden="true"></i> Home</a>
+      <a class="nav-link" th:href="@{/collection}"><i class="ti ti-book" aria-hidden="true"></i> Collection</a>
+      <a class="nav-link" th:href="@{/battle-home}"><i class="ti ti-sword" aria-hidden="true"></i> Battle</a>
+      <a class="nav-link active" th:href="@{/inventory}"><i class="ti ti-package" aria-hidden="true"></i> Inventory</a>
     </div>
     <div class="nav-right">
-      <button class="btn-logout" onclick="goTo('login')"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
+      <button class="btn-logout" onclick="handleLogout()"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
     </div>
   </nav>
 
@@ -35,11 +35,13 @@
   </div>
 </div>
 
-<script src="/js/main.js"></script>
+<script th:src="@{/js/main.js}"></script>
 <script>
   // Panggil fungsi tarik data saat halaman selesai dimuat
   document.addEventListener('DOMContentLoaded', () => {
-    fetchInventoryData();
+      if (typeof fetchInventoryData === 'function') {
+          fetchInventoryData();
+      }
   });
 </script>
 </body>

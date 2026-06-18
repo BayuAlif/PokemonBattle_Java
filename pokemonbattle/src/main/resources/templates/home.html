@@ -1,43 +1,88 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PokéBattle - Pick Pokémon</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <title>PokéBattle - Home</title>
+  <link rel="stylesheet" th:href="@{/css/style.css}">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 </head>
-<body data-page="battle-home">
-<div class="page" id="battle-home">
-  <nav>
-    <div class="nav-logo"><div class="nav-logo-icon">⚔️</div><span class="nav-logo-text">PokéBattle</span></div>
-    <div class="nav-links">
-      <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home" aria-hidden="true"></i> Home</button>
-      <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book" aria-hidden="true"></i> Collection</button>
-      <button class="nav-link active" onclick="goTo('battle-home')"><i class="ti ti-sword" aria-hidden="true"></i> Battle</button>
-      <button class="nav-link" onclick="goTo('inventory')"><i class="ti ti-package" aria-hidden="true"></i> Inventory</button>
-    </div>
-    <div class="nav-right">
-      <div class="badge-trainer">⭐ Admin12345</div>
-      <button class="btn-logout" onclick="goTo('login')"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
-    </div>
-  </nav>
-  <div class="page-content">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;cursor:pointer;color:var(--text3);font-size:12px" onclick="goTo('home')">
-      <i class="ti ti-arrow-left" aria-hidden="true"></i> Kembali
-    </div>
-    <div class="page-header">
-      <div class="page-title" style="color:var(--accent)">Pilih Pokémon untuk Battle</div>
-      <div class="page-sub">Lawan: Agumon — pilih Pokémon andalanmu!</div>
-    </div>
-    <div class="battle-pick-grid" id="battle-pick-grid">
-      <!-- Injected by JS -->
-    </div>
-    <div style="text-align:center;margin-top:24px">
-      <button class="btn btn-red btn-lg" onclick="goTo('battle-ingame')">⚔️ Mulai Battle!</button>
+
+<body data-page="home">
+  <div class="page" id="home">
+    <nav>
+      <div class="nav-logo">
+        <div class="nav-logo-icon">⚔️</div>
+        <span class="nav-logo-text">PokéBattle</span>
+      </div>
+      <div class="nav-links">
+        <a class="nav-link active" th:href="@{/home}"><i class="ti ti-home" aria-hidden="true"></i> Home</a>
+        <a class="nav-link" th:href="@{/collection}"><i class="ti ti-book" aria-hidden="true"></i> Collection</a>
+        <a class="nav-link" th:href="@{/battle-home}"><i class="ti ti-sword" aria-hidden="true"></i> Battle</a>
+        <a class="nav-link" th:href="@{/inventory}"><i class="ti ti-package" aria-hidden="true"></i> Inventory</a>
+      </div>
+      <div class="nav-right">
+        <div class="badge-trainer" id="dash-badge-username">⭐ Loading...</div>
+        <button class="btn-logout" onclick="handleLogout()"><i class="ti ti-logout" aria-hidden="true"></i>
+          Logout</button>
+      </div>
+    </nav>
+
+    <div class="home-content">
+      <div class="trainer-card">
+        <div class="trainer-avatar" id="dash-avatar">-</div>
+        <div>
+          <div><span class="trainer-badge">TRAINER</span> <span
+              style="font-size:10px;color:rgba(255,255,255,.5)">#ONLINE</span></div>
+          <div class="trainer-name" id="dash-username">Loading...</div>
+          <div class="trainer-role">Pokémon Trainer</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-icon">🎮</div>
+          <div class="stat-card-val" id="dash-pokemon">0</div>
+          <div class="stat-card-lbl">Pokémon Dimiliki</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">🏆</div>
+          <div class="stat-card-val" style="color:var(--green)" id="dash-wins">0</div>
+          <div class="stat-card-lbl">Total Menang</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">💀</div>
+          <div class="stat-card-val" style="color:var(--red)" id="dash-losses">0</div>
+          <div class="stat-card-lbl">Total Kalah</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">🎒</div>
+          <div class="stat-card-val" style="color:var(--yellow)" id="dash-items">0</div>
+          <div class="stat-card-lbl">Total Item</div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <div class="action-card" onclick="window.location.href='/battle-home'">
+          <div class="action-card-icon" style="background:rgba(230,57,70,.15)">⚔️</div>
+          <div class="action-title">Mulai Battle!</div>
+          <div class="action-desc">Tantang trainer lain dalam pertarungan sengit</div>
+        </div>
+        <div class="action-card" onclick="window.location.href='/collection'">
+          <div class="action-card-icon" style="background:rgba(124,58,237,.15)">📖</div>
+          <div class="action-title">Lihat Koleksi</div>
+          <div class="action-desc" id="dash-desc-pokemon">Kelola Pokémon dalam koleksimu</div>
+        </div>
+        <div class="action-card" onclick="window.location.href='/inventory'">
+          <div class="action-card-icon" style="background:rgba(234,179,8,.15)">🎒</div>
+          <div class="action-title">Buka Inventory</div>
+          <div class="action-desc" id="dash-desc-items">0 item tersedia untuk digunakan</div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-<script src="/js/main.js"></script>
+  <script th:src="@{/js/main.js}"></script>
 </body>
+
 </html>

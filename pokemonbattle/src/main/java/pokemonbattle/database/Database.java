@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class Database {
-    private static final String URL = "jdbc:sqlite:pokemon_game.db";
+    private static final String URL = "jdbc:sqlite:" + System.getProperty("user.dir") + "/pokemon_game.db";
     private static Connection connection = null;
 
     public static Connection getConnection() throws SQLException {

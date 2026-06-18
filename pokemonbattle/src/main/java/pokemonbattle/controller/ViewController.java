@@ -15,6 +15,10 @@ public class ViewController {
     public String loginPage() {
         return "login"; 
     }
+     @GetMapping("/collection")
+    public String collectionPage() {
+        return "collection"; 
+    }
 
     @GetMapping("/register")
     public String registerPage() {
