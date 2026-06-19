@@ -1,9 +1,9 @@
 // =========================================================================
 // 1. GLOBAL UTILITIES & NAVIGATION
 // =========================================================================
-let globalPokemonLeft = 3; // Melacak sisa slot nyawa tim saat pertempuran aktif
-let catchAttempts = 0;     // Melacak jumlah lemparan bola fase reward (Maksimal 3)
-let globalSwapLeft = 3; // Melacak sisa kuota ganti acak di UI
+let globalPokemonLeft = 3; 
+let globalSwapLeft = 3;    
+let catchAttempts = 0;     
 
 function goTo(page) { 
     window.location.href = '/' + page; 
@@ -148,7 +148,7 @@ async function loadDashboardStats() {
 }
 
 // =========================================================================
-// 4. LOGIKA MENAMPILKAN KREASIONAL KOLEKSI POKEMON
+// 4. LOGIKA MENAMPILKAN KOLEKSI POKEMON
 // =========================================================================
 async function fetchCollectionData() {
     const grid = document.getElementById('collection-grid');
@@ -240,17 +240,29 @@ async function fetchInventoryData() {
 }
 
 // =========================================================================
-// 6. ARENA BATTLE: CORE MECHANICS (BOSS MODE & 3-SLOT TIM NYAWA)
+// 6. ARENA BATTLE: CORE MECHANICS (BOSS MODE & SINKRONISASI REWARD)
 // =========================================================================
 async function loadDeployScreen() {
     const grid = document.getElementById('deploy-grid');
     if (!grid) return;
     try {
-        const response = await fetch('/api/user/collection');
-        const pokemons = await response.json();
+        // 1. Ambil data seluruh koleksi pokemon
+        const responseColl = await fetch('/api/user/collection');
+        const pokemons = await responseColl.json();
+        
+        // 2. Ambil daftar ID pokemon yang sedang pingsan di sesi pertempuran ini
+        let faintedIds = [];
+        try {
+            const responseFainted = await fetch('/api/battle/fainted-list');
+            const faintedData = await responseFainted.json();
+            if (faintedData && faintedData.faintedIds) {
+                faintedIds = faintedData.faintedIds;
+            }
+        } catch(e) { console.log("Belum ada session battle aktif:", e); }
+
         grid.innerHTML = '';
         
-        if(pokemons.length === 0) {
+        if (pokemons.length === 0) {
             grid.innerHTML = '<p style="grid-column:1/-1; text-align:center;">Kamu belum punya Pokemon untuk bertarung!</p>';
             return;
         }
@@ -265,28 +277,40 @@ async function loadDeployScreen() {
             else if (p.type === 'POISON') { icon = 'ti-skull'; typeColor = '#b75eff'; }
 
             const isLegendary = p.rarity === 'LEGENDARY';
+            
+            // CEK KONDISI: Apakah Pokemon ini ada di dalam list pingsan?
+            const isFainted = faintedIds.includes(p.id);
+            
+            // Konfigurasi style khusus jika kartu terdeteksi pingsan (Buram & tidak bisa diklik)
+            const clickAction = isFainted ? '' : `onclick="handlePokemonSelection(${p.id}, '${p.type}')"`;
+            const opacityStyle = isFainted ? 'opacity: 0.4; filter: grayscale(1); pointer-events: none;' : 'cursor: pointer; transition: all 0.2s;';
             const cardBorder = isLegendary ? 'border: 2px solid #f5d44f; box-shadow: 0 0 15px rgba(245, 212, 79, 0.3);' : 'border: 1px solid var(--accent, #444);';
             const rarityBadge = isLegendary ? `<div style="position: absolute; top: 15px; left: 15px; background: #f5d44f; color: #111; font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px;">⭐ LEGENDARY</div>` : '';
+            
+            // Modifikasi teks HP visual menjadi 0 jika terdeteksi pingsan
+            const displayHpText = isFainted ? `0 / ${p.max_hp}` : `${p.max_hp} / ${p.max_hp}`;
+            const faintedOverlay = isFainted ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #ff5e5e; font-weight: bold; font-size: 18px; z-index: 5;"><i class="ti ti-skull"></i>&nbsp;FAINTED</div>` : '';
 
             grid.innerHTML += `
                 <div class="deploy-card" 
-                     style="background: rgba(30, 30, 30, 0.6); ${cardBorder} border-radius: 12px; padding: 20px; text-align: center; position: relative; cursor: pointer; transition: all 0.2s;"
-                     onclick="handlePokemonSelection(${p.id}, '${p.type}')"
-                     onmouseover="this.style.transform='translateY(-5px)'; this.style.borderColor='${typeColor}';"
-                     onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='${isLegendary ? '#f5d44f' : 'var(--accent)'}';">
+                     style="background: rgba(30, 30, 30, 0.6); ${cardBorder} border-radius: 12px; padding: 20px; text-align: center; position: relative; ${opacityStyle}"
+                     ${clickAction}
+                     onmouseover="${isFainted ? '' : `this.style.transform='translateY(-5px)'; this.style.borderColor='${typeColor}';`}"
+                     onmouseout="${isFainted ? '' : `this.style.transform='translateY(0)'; this.style.borderColor='${isLegendary ? '#f5d44f' : 'var(--accent)'}';`}">
+                    ${faintedOverlay}
                     ${rarityBadge}
                     <div style="position: absolute; top: 15px; right: 15px; background: ${typeColor}; color: white; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px;">${p.type}</div>
                     <i class="ti ${icon}" style="font-size: 45px; color: ${typeColor}; margin-top: 15px; margin-bottom: 10px; display: block;"></i>
                     <h3 style="margin: 0 0 10px 0; color: white; font-size: 22px;">${p.name}</h3>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; background: #222; padding: 12px; border-radius: 8px;">
-                        <div style="font-size: 12px; color: #aaa;"><i class="ti ti-heart" style="color: #ff5e5e;"></i> HP: <span style="color: white; font-weight: bold;">${p.hp}/${p.max_hp}</span></div>
+                        <div style="font-size: 12px; color: #aaa;"><i class="ti ti-heart" style="color: #ff5e5e;"></i> HP: <span style="color: ${isFainted ? '#ff5e5e' : 'white'}; font-weight: bold;">${displayHpText}</span></div>
                         <div style="font-size: 12px; color: #aaa;"><i class="ti ti-sword" style="color: #5e81ff;"></i> Atk: <span style="color: white; font-weight: bold;">${p.attack}</span></div>
                         <div style="font-size: 12px; color: #aaa;"><i class="ti ti-shield" style="color: #5eff81;"></i> Def: <span style="color: white; font-weight: bold;">${p.defense}</span></div>
                         <div style="font-size: 12px; color: #aaa;"><i class="ti ti-bolt" style="color: #f5d44f;"></i> Spd: <span style="color: white; font-weight: bold;">${p.speed}</span></div>
                     </div>
                 </div>`;
         });
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Gagal sinkronisasi deploy screen:", e); }
 }
 
 function handlePokemonSelection(pokemonId, playerType) {
@@ -315,13 +339,13 @@ async function startBattlePhase(pokemonId, playerType) {
         
         globalPokemonLeft = data.pokemonLeft;
         globalSwapLeft = data.swapLeft !== undefined ? data.swapLeft : 3;
-        
-        const btnSwap = document.getElementById('btn-menu-swap');
-        if (btnSwap) btnSwap.innerHTML = `<i class="ti ti-refresh"></i> Swap (${globalSwapLeft})`;
 
         document.getElementById('enemy-name').textContent = data.enemy.name;
         document.getElementById('player-name').textContent = data.player.name;
         
+        const btnSwap = document.getElementById('btn-menu-swap');
+        if (btnSwap) btnSwap.innerHTML = `<i class="ti ti-refresh"></i> Swap (${globalSwapLeft})`;
+
         setIconElement('sprite-player', 'icon-player', playerType);
         setIconElement('sprite-enemy', 'icon-enemy', data.enemy.type || 'NORMAL');
 
@@ -395,8 +419,9 @@ function setIconElement(spriteId, iconId, type) {
 
 function updateBattleUI(data) {
     if (data.enemyCurrentHp !== undefined && data.enemyMaxHp) {
-        document.getElementById('enemy-hp-text').textContent = data.enemyCurrentHp + ' / ' + data.enemyMaxHp;
-        const enemyPercent = Math.max(0, (data.enemyCurrentHp / data.enemyMaxHp * 100));
+        const displayHp = (data.enemyAlive !== undefined && !data.enemyAlive) ? 0 : data.enemyCurrentHp;
+        document.getElementById('enemy-hp-text').textContent = displayHp + ' / ' + data.enemyMaxHp;
+        const enemyPercent = Math.max(0, (displayHp / data.enemyMaxHp * 100));
         const enemyBar = document.getElementById('enemy-hp-bar');
         if (enemyBar) {
             enemyBar.style.width = enemyPercent + '%';
@@ -418,9 +443,6 @@ function updateBattleUI(data) {
     }
 }
 
-// =========================================
-// SINKRONISASI ATTACK DENGAN FASE MENANGKAP REWARD
-// =========================================
 async function executeAttack(skillSlotIndex) {
     toggleMenu('menu-main');
     lockActionButtons(true);
@@ -437,7 +459,6 @@ async function executeAttack(skillSlotIndex) {
         });
         const data = await response.json();
 
-        // 1. Animasi menyerang
         if (sprPlayer) sprPlayer.classList.add('anim-attack-player');
         await sleep(300); 
 
@@ -447,16 +468,11 @@ async function executeAttack(skillSlotIndex) {
             if (sprEnemy) sprEnemy.classList.add('anim-damage');
             addLog(`Serangan masuk! Damage: ${data.damage} (${data.effectiveness})`, '#5eff81');
             
-            // Update darah musuh secara bertahap di UI
             if (data.enemyCurrentHp !== undefined && data.enemyMaxHp) {
-                // Jika enemyAlive adalah false, langsung paksa cetak angka 0 di layar
                 const displayHp = data.enemyAlive ? data.enemyCurrentHp : 0;
-                
                 document.getElementById('enemy-hp-text').textContent = displayHp + ' / ' + data.enemyMaxHp;
-                
-                const enemyPercent = Math.max(0, (displayHp / data.enemyMaxHp * 100));
                 const enemyBar = document.getElementById('enemy-hp-bar');
-                if (enemyBar) enemyBar.style.width = enemyPercent + '%';
+                if (enemyBar) enemyBar.style.width = Math.max(0, (displayHp / data.enemyMaxHp * 100)) + '%';
             }
         }
 
@@ -464,13 +480,15 @@ async function executeAttack(skillSlotIndex) {
         if (sprPlayer) sprPlayer.classList.remove('anim-attack-player');
         if (sprEnemy) sprEnemy.classList.remove('anim-damage');
 
-        // === FASE FILTER REWARD: Jika HP musuh sudah habis ===
         if (!data.enemyAlive) {
             addLog('MUSUH TELAH DIKALAHKAN! Fase Menangkap Aktif! 🌟', '#fbbf24');
             addLog('Gunakan tombol "Catch" sekarang! Kamu punya 3x Kesempatan.', '#38bdf8');
             
-            catchAttempts = 0; // Reset total lemparan bola
+            if (data.rewardMessage) {
+                alert(`PERTEMPURAN SELESAI!\n\n${data.rewardMessage}`);
+            }
             
+            catchAttempts = 0;
             const btnAttack = document.getElementById('btn-menu-attack');
             if (btnAttack) btnAttack.classList.add('disabled');
             
@@ -479,7 +497,6 @@ async function executeAttack(skillSlotIndex) {
             return;
         }
 
-        // 2. Giliran musuh membalas (Darah pemain berkurang setelah musuh menghantam)
         if (data.enemyAttackMessage) {
             await sleep(500);
             addLog(`Musuh mengamuk dan menyerang balik!`, "#fbbf24");
@@ -489,25 +506,13 @@ async function executeAttack(skillSlotIndex) {
             if (sprPlayer) sprPlayer.classList.add('anim-damage');
             addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
             
-            // Sinkronisasi penurunan darah player
-            if (data.playerCurrentHp !== undefined && data.playerMaxHp) {
-                document.getElementById('player-hp-text').textContent = data.playerCurrentHp + ' / ' + data.playerMaxHp;
-                const playerPercent = Math.max(0, (data.playerCurrentHp / data.playerMaxHp * 100));
-                const playerBar = document.getElementById('player-hp-bar');
-                if (playerBar) {
-                    playerBar.style.width = playerPercent + '%';
-                    playerBar.className = 'hp-bar-fill';
-                    if(playerPercent <= 20) playerBar.classList.add('danger');
-                    else if(playerPercent <= 50) playerBar.classList.add('warning');
-                }
-            }
+            updateBattleUI(data);
             
             await sleep(400);
             if (sprEnemy) sprEnemy.classList.remove('anim-attack-enemy');
             if (sprPlayer) sprPlayer.classList.remove('anim-damage');
         }
         
-        // 3. Evaluasi kematian tim player
         if (data.playerAlive !== undefined && !data.playerAlive) {
             if (sprPlayer) sprPlayer.classList.add('anim-faint');
             addLog('Pokémon milikmu pingsan... 💀', '#ff5e5e');
@@ -518,17 +523,13 @@ async function executeAttack(skillSlotIndex) {
                 document.getElementById('phase-selection').style.display = 'block';
                 loadDeployScreen(); 
             } else {
-                // KONDISI KALAH TOTAL (0 NYAWA TIM SISA)
                 await sleep(1000);
                 addLog("Semua Pokémon andalanmu telah pingsan!", "#ef4444");
                 addLog("Pokémon musuh melarikan diri... Kamu kalah! 💀", "#ef4444");
                 
-                // POPUP HADIAH HIBURAN DARI DATABASE
                 if (data.rewardMessage) {
                     alert(`GAME OVER!\n\n${data.rewardMessage}\n\nSilakan cek tas inventory kamu.`);
-                    addLog(data.rewardMessage, "#ffd966");
                 }
-                
                 setTimeout(() => { window.location.href = '/home'; }, 2000);
             }
             return;
@@ -537,9 +538,75 @@ async function executeAttack(skillSlotIndex) {
     lockActionButtons(false);
 }
 
-// =========================================
-// LOGIKA TOMBOL CATCH REWARD (3 KALI KESEMPATAN)
-// =========================================
+async function executeSwapRandom() {
+    const enemyHpText = document.getElementById('enemy-hp-text').textContent;
+    if (enemyHpText.startsWith('0 /')) return;
+
+    if (globalSwapLeft <= 0) {
+        addLog("Jatah ganti Pokémon acak kamu sudah habis pertempuran ini!", "#ff9999");
+        return;
+    }
+
+    if (!confirm("Apakah kamu yakin ingin menukar Pokémon saat ini secara acak? (Musuh akan langsung memukul!)")) return;
+
+    toggleMenu('menu-main');
+    lockActionButtons(true);
+    addLog("Menarik kembali Pokémon aktif dan mengocok dadu cadangan...", "#ffd966");
+
+    try {
+        const response = await fetch('/api/battle/swap-random', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.error) {
+            addLog(data.error, '#ff9999');
+            lockActionButtons(false);
+            return;
+        }
+
+        globalSwapLeft = data.swapLeft;
+        const btnSwap = document.getElementById('btn-menu-swap');
+        if (btnSwap) btnSwap.innerHTML = `<i class="ti ti-refresh"></i> Swap (${globalSwapLeft})`;
+
+        const sprPlayer = document.getElementById('sprite-player');
+        if (sprPlayer) {
+            sprPlayer.style.transition = "all 0.3s ease";
+            sprPlayer.style.transform = "scale(0)"; 
+            await sleep(300);
+            
+            document.getElementById('player-name').textContent = data.player.name;
+            setIconElement('sprite-player', 'icon-player', data.player.type);
+            sprPlayer.style.transform = "scale(1)"; 
+        }
+
+        updateBattleUI({
+            enemyCurrentHp: data.enemyCurrentHp, enemyMaxHp: data.enemyMaxHp,
+            playerCurrentHp: data.playerCurrentHp, playerMaxHp: data.playerMaxHp
+        });
+
+        renderSkillButtons(data.playerMoves);
+        addLog(data.message, "#5eff81");
+
+        if (data.enemyAttackMessage) {
+            await sleep(600);
+            addLog(`Musuh mengambil kesempatan saat kamu mengganti Pokémon!`, "#fbbf24");
+            const sprEnemy = document.getElementById('sprite-enemy');
+            if (sprEnemy) sprEnemy.classList.add('anim-attack-enemy');
+            await sleep(300);
+
+            if (sprPlayer) sprPlayer.classList.add('anim-damage');
+            addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
+            updateBattleUI(data);
+
+            await sleep(400);
+            if (sprEnemy) sprEnemy.classList.remove('anim-attack-enemy');
+            if (sprPlayer) sprPlayer.classList.remove('anim-damage');
+
+            if (await checkPostActionSurvival(data)) return;
+        }
+    } catch (err) { console.error(err); }
+    lockActionButtons(false);
+}
+
 async function executeCatch() {
     const enemyHpText = document.getElementById('enemy-hp-text').textContent;
     if (!enemyHpText.startsWith('0 /')) {
@@ -549,7 +616,6 @@ async function executeCatch() {
 
     lockActionButtons(true);
     catchAttempts++; 
-    
     addLog(`[Lemparan ke-${catchAttempts}/3] Melempar Pokéball...`, "#38bdf8");
     
     try {
@@ -559,15 +625,6 @@ async function executeCatch() {
             body: JSON.stringify({ attempt: catchAttempts }) 
         });
         const data = await response.json();
-        
-        // Proteksi jika data yang dikembalikan null atau bermasalah
-        if (!data) {
-            addLog("Gagal mendapatkan respons dari server.", "#ff9999");
-            lockActionButtons(false);
-            return;
-        }
-
-        // Ambil pesan dari properti backend, gunakan fallback string jika undefined
         const logMessage = data.message || data.error || "Pokéball bergoyang... Namun gagal mengamankan Pokémon!";
 
         if (data.caught) {
@@ -581,12 +638,10 @@ async function executeCatch() {
             setTimeout(() => { window.location.href = '/collection'; }, 2500);
             return;
         } else {
-            // Cetak pesan kegagalan asli dari Java (bukan undefined lagi)
             addLog(logMessage, '#ff9999');
-            
             if (catchAttempts >= 3) {
                 await sleep(1000);
-                addLog("Kesempatan menangkap habis! Pokémon liar melarikan diri ke hutan... 🏃‍♂️", "#ef4444");
+                addLog("Kesempatan menangkap habis! Pokémon liar melarikan diri... 🏃‍♂️", "#ef4444");
                 const sprEnemy = document.getElementById('sprite-enemy');
                 if (sprEnemy) {
                     sprEnemy.style.transition = "all 0.8s ease";
@@ -599,17 +654,13 @@ async function executeCatch() {
                 addLog(`Ayo coba lagi! Sisa lemparan: ${3 - catchAttempts}`, '#ffd966');
             }
         }
-    } catch (err) { 
-        console.error("Error pada mekanisme catch:", err);
-        addLog("Terjadi kesalahan jaringan saat melempar bola.", "#ff9999");
-    }
+    } catch (err) { console.error(err); }
     lockActionButtons(false);
 }
 
 async function checkPostActionSurvival(data) {
     if (data.playerAlive !== undefined && !data.playerAlive) {
         const sprPlayer = document.getElementById('sprite-player');
-        const sprEnemy = document.getElementById('sprite-enemy');
         if (sprPlayer) sprPlayer.classList.add('anim-faint');
         addLog('Pokémon milikmu pingsan... 💀', '#ff5e5e');
         
@@ -621,12 +672,6 @@ async function checkPostActionSurvival(data) {
         } else {
             await sleep(1000);
             addLog("Semua Pokémon andalanmu telah pingsan!", "#ef4444");
-            if (sprEnemy) {
-                sprEnemy.style.transition = "all 0.8s ease";
-                sprEnemy.style.transform = "translateX(300px)";
-                sprEnemy.style.opacity = "0";
-            }
-            addLog("Pokémon musuh berhasil kabur melarikan diri... Kamu kalah! 💀", "#ef4444");
             setTimeout(() => { window.location.href = '/home'; }, 3000);
         }
         return true;
@@ -691,14 +736,9 @@ async function loadItemList() {
         `<button class="btn-action" onclick="executeItem('${item.name}')" style="flex-direction:row; justify-content:space-between; padding:5px 15px;">
             <span>${item.name}</span> <span style="background:var(--accent); padding:2px 8px; border-radius:10px; font-size:10px;">x${item.quantity}</span>
         </button>`).join('');
-    } catch (e) {
-        console.error("Gagal memuat item", e);
-    }
+    } catch (e) { console.error(e); }
 }
 
-// =========================================================================
-// 7. AUTO-INIT INITIALIZATION BERDASARKAN SELEKTOR HALAMAN HTML
-// =========================================================================
 document.addEventListener("DOMContentLoaded", () => {
     const pageType = document.body.dataset.page;
     if (pageType === 'home') {
@@ -711,97 +751,3 @@ document.addEventListener("DOMContentLoaded", () => {
         loadDeployScreen();
     }
 });
-
-// =========================================================================
-// 8. LOGIKA TOMBOL SWAP MANUAL RANDOM (MAKSIMAL 3 KALI)
-// =========================================================================
-async function executeSwapRandom() {
-    // Pengaman: Jangan biarkan swap jika musuh sudah mati (fase menangkap)
-    const enemyHpText = document.getElementById('enemy-hp-text').textContent;
-    if (enemyHpText.startsWith('0 /')) return;
-
-    if (globalSwapLeft <= 0) {
-        addLog("Jatah ganti Pokémon acak kamu sudah habis pertempuran ini!", "#ff9999");
-        return;
-    }
-
-    if (!confirm("Apakah kamu yakin ingin menukar Pokémon saat ini secara acak? (Musuh akan langsung menyerangmu saat pergantian!)")) {
-        return;
-    }
-
-    toggleMenu('menu-main');
-    lockActionButtons(true);
-    addLog("Menarik kembali Pokémon aktif dan mengocok dadu cadangan...", "#ffd966");
-
-    try {
-        const response = await fetch('/api/battle/swap-random', { method: 'POST' });
-        const data = await response.json();
-
-        if (data.error) {
-            addLog(data.error, '#ff9999');
-            lockActionButtons(false);
-            return;
-        }
-
-        globalSwapLeft = data.swapLeft;
-        
-        // Perbarui teks kuota di tombol UI
-        const btnSwap = document.getElementById('btn-menu-swap');
-        if (btnSwap) btnSwap.innerHTML = `<i class="ti ti-refresh"></i> Swap (${globalSwapLeft})`;
-
-        // 1. Efek visual pergantian pemain
-        const sprPlayer = document.getElementById('sprite-player');
-        if (sprPlayer) {
-            sprPlayer.style.transition = "all 0.3s ease";
-            sprPlayer.style.transform = "scale(0)"; // Mengecil hilang
-            await sleep(300);
-            
-            // Set data Pokémon baru yang keluar dari kocokan
-            document.getElementById('player-name').textContent = data.player.name;
-            
-            // Atur ulang warna lingkaran elemen di main.js
-            let pType = data.player.type;
-            if(pType === 'FIRE') { sprPlayer.style.background = 'linear-gradient(135deg, #ef4444, #7f1d1d)'; document.getElementById('icon-player').className = 'ti ti-flame'; }
-            else if(pType === 'WATER') { sprPlayer.style.background = 'linear-gradient(135deg, #3b82f6, #1e3a8a)'; document.getElementById('icon-player').className = 'ti ti-droplet'; }
-            else if(pType === 'GRASS') { sprPlayer.style.background = 'linear-gradient(135deg, #10b981, #064e3b)'; document.getElementById('icon-player').className = 'ti ti-leaf'; }
-            else if(pType === 'ELECTRIC') { sprPlayer.style.background = 'linear-gradient(135deg, #f59e0b, #78350f)'; document.getElementById('icon-player').className = 'ti ti-bolt'; }
-            else if(pType === 'ICE') { sprPlayer.style.background = 'linear-gradient(135deg, #38bdf8, #0c4a6e)'; document.getElementById('icon-player').className = 'ti ti-snowflake'; }
-            else if(pType === 'POISON') { sprPlayer.style.background = 'linear-gradient(135deg, #a855f7, #4c1d95)'; document.getElementById('icon-player').className = 'ti ti-skull'; }
-
-            sprPlayer.style.transform = "scale(1)"; // Muncul membesar kembali
-        }
-
-        updateBattleUI({
-            enemyCurrentHp: data.enemyCurrentHp, enemyMaxHp: data.enemyMaxHp,
-            playerCurrentHp: data.playerCurrentHp, playerMaxHp: data.playerMaxHp
-        });
-
-        renderSkillButtons(data.playerMoves);
-        addLog(data.message, "#5eff81");
-
-        // 2. Animasi serangan musuh yang memanfaatkan kelengahan swap pemain
-        if (data.enemyAttackMessage) {
-            await sleep(600);
-            addLog(`Musuh mengambil kesempatan saat kamu mengganti Pokémon!`, "#fbbf24");
-            const sprEnemy = document.getElementById('sprite-enemy');
-            if (sprEnemy) sprEnemy.classList.add('anim-attack-enemy');
-            await sleep(300);
-
-            if (sprPlayer) sprPlayer.classList.add('anim-damage');
-            addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
-            
-            updateBattleUI(data);
-
-            await sleep(400);
-            if (sprEnemy) sprEnemy.classList.remove('anim-attack-enemy');
-            if (sprPlayer) sprPlayer.classList.remove('anim-damage');
-
-            // Cek jika Pokémon baru hasil kocokan langsung pingsan akibat hantaman brutal musuh
-            if (await checkPostActionSurvival(data)) return;
-        }
-
-    } catch (err) {
-        console.error(err);
-    }
-    lockActionButtons(false);
-}
