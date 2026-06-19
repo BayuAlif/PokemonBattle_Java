@@ -99,4 +99,39 @@ public class BattleService {
         if (mult < 1.0) return "not_effective";
         return "normal";
     }
+
+    /**
+     * Menghitung apakah Pokémon liar berhasil ditangkap.
+     * Rumus sederhana: makin sedikit HP, makin mudah.
+     * chance = (1 - currentHp/maxHp) * 0.5 + 0.1  (min 0.1, max 0.6)
+     */
+    public boolean isCatchSuccessful(int currentHp, int maxHp) {
+        double hpFactor = 1.0 - ((double) currentHp / maxHp);
+        double chance = hpFactor * 0.5 + 0.1;
+        return random.nextDouble() < chance;
+    }
+
+    /**
+     * Mendapatkan damage yang diterima akibat status (per turn).
+     * Hanya BURN dan POISON yang memberi damage.
+     */
+    public int getStatusDamage(Status status, int maxHp) {
+        if (status == Status.BURN || status == Status.POISON) {
+            return Math.max(1, maxHp / 16); // 1/16 HP seperti di Pokémon
+        }
+        return 0;
+    }
+
+    /**
+     * Cek apakah Pokémon bisa bergerak (tidak freeze/sleep/paralyzed)
+     */
+    public boolean canMove(Status status) {
+        if (status == Status.FREEZE || status == Status.SLEEP) {
+            return false; // tidak bisa bergerak sama sekali
+        }
+        if (status == Status.PARALYSIS) {
+            return random.nextDouble() < 0.75; // 25% chance gagal
+        }
+        return true;
+    }
 }

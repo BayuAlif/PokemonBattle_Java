@@ -30,9 +30,9 @@ public class ViewController {
         return "home"; 
     }
 
-    @GetMapping("/battle-ingame")
+    @GetMapping("/battle")
     public String battleInGame() {
-        return "battle-ingame"; 
+        return "battle"; 
     }
 
     @GetMapping("/inventory")

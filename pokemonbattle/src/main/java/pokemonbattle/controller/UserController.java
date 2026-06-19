@@ -73,12 +73,12 @@ public class UserController {
         }
 
         // UPDATE: Tambahkan p.speed ke dalam SELECT
-        String sql = "SELECT p.name, p.hp, p.max_hp, p.attack, p.defense, p.speed, p.rarity, t.name as type_name "
-                + "FROM user_pokemon up "
-                + "JOIN pokemon p ON up.pokemon_id = p.id "
-                + "JOIN types t ON p.type_id = t.id "
-                + "JOIN users u ON up.user_id = u.id "
-                + "WHERE u.username = ?";
+        String sql = "SELECT up.pokemon_id as id, p.name, p.hp, p.max_hp, p.attack, p.defense, p.speed, p.rarity, t.name as type_name " +
+             "FROM user_pokemon up " +
+             "JOIN pokemon p ON up.pokemon_id = p.id " +
+             "JOIN types t ON p.type_id = t.id " +
+             "JOIN users u ON up.user_id = u.id " +
+             "WHERE u.username = ?";
 
         try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -87,6 +87,7 @@ public class UserController {
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> poke = new HashMap<>();
+                    poke.put("id", rs.getInt("id"));
                     poke.put("name", rs.getString("name"));
                     poke.put("hp", rs.getInt("hp"));
                     poke.put("max_hp", rs.getInt("max_hp"));

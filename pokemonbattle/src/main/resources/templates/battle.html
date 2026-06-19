@@ -1,201 +1,349 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PokéBattle - Arena Pertarungan</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-  <style>
-    .battle-arena {
-      background: linear-gradient(to bottom, #2b3a4a, #1a2530);
-      border: 1px solid var(--accent);
-      border-radius: 12px;
-      height: 350px;
-      position: relative;
-      margin-bottom: 20px;
-      overflow: hidden;
-    }
-    .stat-box {
-      background: rgba(20, 20, 20, 0.8);
-      border: 1px solid #444;
-      padding: 15px;
-      border-radius: 10px;
-      width: 250px;
-      position: absolute;
-    }
-    .stat-box.enemy { top: 20px; right: 20px; }
-    .stat-box.player { bottom: 20px; left: 20px; }
-    
-    .hp-bar-bg {
-      background: #333;
-      height: 10px;
-      border-radius: 5px;
-      margin: 8px 0;
-      overflow: hidden;
-    }
-    .hp-bar-fill {
-      background: #5eff81; /* Hijau kalau penuh */
-      height: 100%;
-      width: 100%; /* Ubah persentase ini nanti lewat JS */
-      transition: width 0.3s;
-    }
-    
-    .dashboard {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 20px;
-    }
-    .battle-log {
-      background: rgba(30, 30, 30, 0.6);
-      border: 1px solid #444;
-      padding: 15px;
-      border-radius: 12px;
-      height: 160px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 14px;
-      color: #ddd;
-    }
-    .battle-log p { margin: 0 0 8px 0; }
-    
-    .action-panel {
-      background: rgba(30, 30, 30, 0.6);
-      border: 1px solid var(--accent);
-      padding: 15px;
-      border-radius: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .action-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      height: 100%;
-    }
-    .btn-action {
-      background: #222;
-      border: 1px solid #555;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.2s;
-    }
-    .btn-action:hover {
-      background: var(--accent);
-      border-color: var(--accent);
-    }
-  </style>
-</head>
-<body data-page="battle">
-<div class="page" id="battle-page">
-  <nav>
-    <div class="nav-logo"><div class="nav-logo-icon">⚔️</div><span class="nav-logo-text">PokéBattle</span></div>
-    <div class="nav-links">
-      <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home" aria-hidden="true"></i> Home</button>
-      <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book" aria-hidden="true"></i> Collection</button>
-      <button class="nav-link active" onclick="goTo('battle')"><i class="ti ti-sword" aria-hidden="true"></i> Battle</button>
-      <button class="nav-link" onclick="goTo('inventory')"><i class="ti ti-package" aria-hidden="true"></i> Inventory</button>
-    </div>
-    <div class="nav-right">
-      <button class="btn-logout" onclick="goTo('login')"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
-    </div>
-  </nav>
-
-  <div class="page-content">
-    
-    <div class="battle-arena">
-      <div class="stat-box enemy">
-        <h3 style="margin: 0; color: white;">Wild Charizard <span style="font-size: 12px; color: var(--text3);">Lv. 50</span></h3>
-        <div class="hp-bar-bg"><div class="hp-bar-fill" style="width: 100%;"></div></div>
-        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
-          <span>HP</span>
-          <span>140 / 140</span>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéBattle - Arena</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        /* CSS Khusus Arena */
+        .battle-arena {
+        background: linear-gradient(to bottom, #2b3a4a, #1a2530);
+        border: 1px solid var(--accent);
+        border-radius: 12px;
+        height: 350px;
+        position: relative;
+        margin-bottom: 20px;
+        overflow: hidden;
+        }
+        .stat-box {
+        background: rgba(20, 20, 20, 0.8);
+        border: 1px solid #444;
+        padding: 15px;
+        border-radius: 10px;
+        width: 250px;
+        position: absolute;
+        z-index: 2;
+        }
+        .stat-box.enemy { top: 20px; right: 20px; }
+        .stat-box.player { bottom: 20px; left: 20px; }
+        .hp-bar-bg { background: #333; height: 10px; border-radius: 5px; margin: 8px 0; overflow: hidden; }
+        .hp-bar-fill { background: #5eff81; height: 100%; width: 100%; transition: width 0.3s, background-color 0.3s; }
+        .dashboard { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .battle-log { background: rgba(30, 30, 30, 0.6); border: 1px solid #444; padding: 15px; border-radius: 12px; height: 160px; overflow-y: auto; font-family: monospace; font-size: 14px; color: #ddd; }
+        .battle-log p { margin: 0 0 8px 0; }
+        .action-panel { background: rgba(30, 30, 30, 0.6); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; height: 100%; }
+        .btn-action { background: #222; border: 1px solid #555; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; padding: 10px; }
+        .btn-action:hover { background: var(--accent); border-color: var(--accent); }
+        .deploy-card { background: rgba(30, 30, 30, 0.6); border: 1px solid var(--accent); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .deploy-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(255, 94, 94, 0.3); }
+    </style>
+    </head>
+    <body data-page="battle">
+    <div class="page" id="battle-page">
+    <nav>
+        <div class="nav-logo"><div class="nav-logo-icon">⚔️</div><span class="nav-logo-text">PokéBattle</span></div>
+        <div class="nav-links">
+        <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home" aria-hidden="true"></i> Home</button>
+        <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book" aria-hidden="true"></i> Collection</button>
+        <button class="nav-link active" onclick="goTo('battle')"><i class="ti ti-sword" aria-hidden="true"></i> Battle</button>
+        <button class="nav-link" onclick="goTo('inventory')"><i class="ti ti-package" aria-hidden="true"></i> Inventory</button>
         </div>
-        <i class="ti ti-flame" style="position: absolute; top: 15px; right: -40px; font-size: 60px; color: #ff5e5e; opacity: 0.5;"></i>
-      </div>
-
-      <div class="stat-box player">
-        <h3 style="margin: 0; color: white;">Blastoise <span style="font-size: 12px; color: var(--text3);">Lv. 52</span></h3>
-        <div class="hp-bar-bg"><div class="hp-bar-fill" style="width: 80%; background: #f5d44f;"></div></div>
-        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
-          <span>HP</span>
-          <span>112 / 140</span>
+        <div class="nav-right">
+        <button class="btn-logout" onclick="goTo('login')"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
         </div>
-        <i class="ti ti-droplet" style="position: absolute; top: 15px; right: -40px; font-size: 60px; color: #5e81ff; opacity: 0.5;"></i>
-      </div>
-    </div>
+    </nav>
 
-    <div class="dashboard">
-      <div class="battle-log" id="battle-log">
-        <p style="color: var(--text3);">Menunggu pertarungan dimulai...</p>
-      </div>
-
-      <div class="action-panel">
+    <div class="page-content">
         
-        <div class="action-grid" id="menu-main">
-          <button class="btn-action" onclick="toggleMenu('menu-skills')"><i class="ti ti-sword"></i> Attack</button>
-          <button class="btn-action" onclick="toggleMenu('menu-items')"><i class="ti ti-package"></i> Item</button>
-          <button class="btn-action" onclick="catchAction()"><i class="ti ti-pokeball"></i> Catch (3)</button>
-          <button class="btn-action" onclick="goTo('home')"><i class="ti ti-run"></i> Run</button>
+        <div id="phase-selection" style="display: block;">
+        <div class="page-header">
+            <div class="page-title" style="color:var(--accent)">Deploy Pokémon</div>
+            <div class="page-sub">Pilih satu Pokémon dari koleksimu untuk bertarung!</div>
+        </div>
+        
+        <div class="collection-grid" id="deploy-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+            <p style="color: var(--text3);">Memuat tim Pokémon...</p>
+        </div>
         </div>
 
-        <div class="action-grid" id="menu-skills" style="display: none;">
-          <button class="btn-action" style="border-color: #5e81ff;" onclick="attackAction('Hydro Pump')">Hydro Pump</button>
-          <button class="btn-action" style="border-color: #5e81ff;" onclick="attackAction('Surf')">Surf</button>
-          <button class="btn-action" style="border-color: #777;" onclick="attackAction('Tackle')">Tackle</button>
-          <button class="btn-action" style="background: #333;" onclick="toggleMenu('menu-main')">Batal</button>
+        <div id="phase-arena" style="display: none;">
+        
+        <div class="battle-arena">
+            <div class="stat-box enemy">
+            <h3 style="margin: 0; color: white;"><span id="enemy-name">Memuat...</span> <span style="font-size: 12px; color: var(--text3);">Musuh</span></h3>
+            <div class="hp-bar-bg"><div class="hp-bar-fill" id="enemy-hp-bar" style="width: 100%;"></div></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
+                <span>HP</span>
+                <span id="enemy-hp-text">0 / 0</span>
+            </div>
+            </div>
+
+            <div class="stat-box player">
+            <h3 style="margin: 0; color: white;"><span id="player-name">Memuat...</span></h3>
+            <div class="hp-bar-bg"><div class="hp-bar-fill" id="player-hp-bar" style="width: 100%;"></div></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
+                <span>HP</span>
+                <span id="player-hp-text">0 / 0</span>
+            </div>
+            </div>
         </div>
 
-        <div class="action-grid" id="menu-items" style="display: none;">
-          <button class="btn-action" onclick="itemAction('Potion')">Potion (x10)</button>
-          <button class="btn-action" onclick="itemAction('Revive')">Revive (x5)</button>
-          <button class="btn-action" style="background: #333; grid-column: span 2;" onclick="toggleMenu('menu-main')">Batal</button>
+        <div class="dashboard">
+            <div class="battle-log" id="battle-log">
+            <p style="color: var(--text3);">Menunggu pertarungan dimulai...</p>
+            </div>
+
+            <div class="action-panel">
+            <div class="action-grid" id="menu-main">
+                <button class="btn-action" onclick="toggleMenu('menu-skills')"><i class="ti ti-sword"></i> Attack</button>
+                <button class="btn-action" onclick="toggleMenu('menu-items')"><i class="ti ti-package"></i> Item</button>
+                <button class="btn-action" onclick="executeCatch()"><i class="ti ti-pokeball"></i> Catch</button>
+                <button class="btn-action" onclick="location.reload()"><i class="ti ti-run"></i> Run</button>
+            </div>
+
+            <div class="action-grid" id="menu-skills" style="display: none;">
+                <button class="btn-action" id="btn-skill-1" onclick="executeAttack(1)">Skill Normal</button>
+                <button class="btn-action" id="btn-skill-2" onclick="executeAttack(2)">Skill Elemen 1</button>
+                <button class="btn-action" id="btn-skill-3" onclick="executeAttack(3)">Skill Elemen 2</button>
+                <button class="btn-action" id="btn-skill-4" onclick="executeAttack(4)">Skill Elemen 3</button>
+                <button class="btn-action" style="background: #333; grid-column: span 2;" onclick="toggleMenu('menu-main')">Kembali</button>
+            </div>
+
+            <div class="action-grid" id="menu-items" style="display: none;">
+                <div id="item-list-container" style="grid-column: span 2; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: 100px;">
+                <p style="color: var(--text3); font-size: 12px; text-align: center;">Memuat item...</p>
+                </div>
+                <button class="btn-action" style="background: #333; grid-column: span 2;" onclick="toggleMenu('menu-main')">Kembali</button>
+            </div>
+            </div>
         </div>
 
-      </div>
+        </div>
     </div>
-  </div>
-</div>
+    </div>
 
-<script>
-  function goTo(page) { window.location.href = '/' + page; }
+    <script>
+        function goTo(page) { window.location.href = '/' + page; }
 
-  // Fungsi untuk ganti menu di UI
-  function toggleMenu(menuId) {
-    document.getElementById('menu-main').style.display = 'none';
-    document.getElementById('menu-skills').style.display = 'none';
-    document.getElementById('menu-items').style.display = 'none';
-    
-    document.getElementById(menuId).style.display = 'grid';
-  }
+        function toggleMenu(menuId) {
+            document.getElementById('menu-main').style.display = 'none';
+            document.getElementById('menu-skills').style.display = 'none';
+            document.getElementById('menu-items').style.display = 'none';
+            document.getElementById(menuId).style.display = 'grid';
+        }
 
-  // Tambah teks ke log pertarungan
-  function addLog(text, color = "white") {
-    const logBox = document.getElementById('battle-log');
-    logBox.innerHTML += `<p style="color: ${color};">> ${text}</p>`;
-    logBox.scrollTop = logBox.scrollHeight; // Auto scroll ke bawah
-  }
+        function addLog(text, color = "white") {
+            const logBox = document.getElementById('battle-log');
+            logBox.innerHTML += `<p style="color: ${color};">> ${text}</p>`;
+            logBox.scrollTop = logBox.scrollHeight; 
+        }
 
-  // Aksi Simulasi UI
-  function attackAction(skillName) {
-    addLog(`Blastoise menggunakan ${skillName}!`);
-    toggleMenu('menu-main');
-    // Nanti kawanmu akan pasang fetch() ke backend di sini
-  }
+        async function loadDeployScreen() {
+            const grid = document.getElementById('deploy-grid');
+            try {
+                const response = await fetch('/api/user/collection');
+                const pokemons = await response.json();
+                grid.innerHTML = '';
+                if(pokemons.length === 0) {
+                grid.innerHTML = '<p>Kamu belum punya Pokemon untuk bertarung!</p>';
+                return;
+                }
+                pokemons.forEach(p => {
+                grid.innerHTML += `
+                    <div class="deploy-card" onclick="startBattlePhase(${p.id})">
+                    <h3 style="color: white; margin-bottom: 5px;">${p.name}</h3>
+                    <p style="font-size: 12px; color: var(--text3);">Lv. ?? | HP: ${p.hp}/${p.max_hp}</p>
+                    </div>
+                `;
+                });
+            } catch (e) {
+                console.log("Error load deployment", e);
+            }
+        }
 
-  function itemAction(itemName) {
-    addLog(`Player menggunakan ${itemName}!`);
-    toggleMenu('menu-main');
-  }
+        async function startBattlePhase(pokemonId) {
+            document.getElementById('phase-selection').style.display = 'none';
+            document.getElementById('phase-arena').style.display = 'block';
+            addLog("Mengirim Pokémon ke arena...", "var(--accent)");
+            try {
+                const response = await fetch('/api/battle/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerPokemonId: pokemonId })
+                });
+                if (!response.ok) throw new Error('Gagal memulai battle');
+                    const data = await response.json();
+                    document.getElementById('enemy-name').textContent = data.enemy.name;
+                    document.getElementById('enemy-hp-text').textContent = data.enemyCurrentHp + ' / ' + data.enemyMaxHp;
+                    document.getElementById('enemy-hp-bar').style.width = '100%';
+                    document.getElementById('player-name').textContent = data.player.name;
+                    document.getElementById('player-hp-text').textContent = data.player.hp + ' / ' + data.player.maxHp;
+                    document.getElementById('player-hp-bar').style.width = '100%';
+                if (data.enemyMoves) {
+                    data.enemyMoves.forEach((move, i) => {
+                        const btn = document.getElementById('btn-skill-' + (i + 1));
+                        if (btn) btn.textContent = move.name + ' (' + move.type + ')';
+                    });
+                }
+                addLog(data.message, "#5eff81");
+            } catch (err) {
+                addLog("Error: " + err.message, "#ff5e5e");
+                console.error(err);
+            }
+        }
 
-  function catchAction() {
-    addLog(`Player melempar Pokeball...`);
-    // Simulasi logika indikator tangkap di Java kamu: (enemy.getHpRatio() <= 0.2)
-    setTimeout(() => { addLog("Wild Charizard terlepas dari bola!", "#ff5e5e"); }, 1000);
-  }
-</script>
+        // Fungsi untuk fetch daftar item dan menampilkannya di panel item
+        async function loadItemList() {
+            try {
+                const resp = await fetch('/api/user/inventory');
+                const items = await resp.json();
+                const container = document.getElementById('item-list-container');
+                if (!items || items.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text3); text-align: center;">Kamu tidak punya item</p>';
+                    return;
+                }
+                container.innerHTML = items.map(item =>
+                `<button class="btn-action" onclick="executeItem('${item.name}')" style="font-size:12px; padding:5px;">
+                    ${item.name} (x${item.quantity})
+                </button>`
+                ).join('');
+            } catch (e) {
+                console.error("Gagal memuat item", e);
+            }
+        }
+
+        // Panggil loadItemList saat membuka menu item
+        function toggleMenu(menuId) {
+            document.getElementById('menu-main').style.display = 'none';
+            document.getElementById('menu-skills').style.display = 'none';
+            document.getElementById('menu-items').style.display = 'none';
+            const menu = document.getElementById(menuId);
+            menu.style.display = 'grid';
+            if (menuId === 'menu-items') loadItemList();
+        }
+
+        async function executeAttack(skillSlotIndex) {
+            toggleMenu('menu-main');
+            addLog(`Menyerang dengan skill slot ${skillSlotIndex}...`, "#ffd966");
+            try {
+                const response = await fetch('/api/battle/attack', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ skillSlot: skillSlotIndex })
+                });
+                if (!response.ok) throw new Error('Gagal menyerang');
+                const data = await response.json();
+
+                if (!data.hit) {
+                addLog(data.message || 'Serangan meleset!', '#ff9999');
+                if (data.playerCurrentHp !== undefined) updateBattleUI(data);
+                if (data.enemyAttackMessage) addLog(data.enemyAttackMessage, '#ff9999');
+                // Cek apakah player mati setelah serangan musuh
+                if (data.playerAlive !== undefined && !data.playerAlive) {
+                    addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
+                    document.getElementById('menu-main').style.display = 'none';
+                    setTimeout(() => { window.location.href = '/home'; }, 2000);
+                }
+                return;
+                }
+
+                addLog(`Serangan kena! Damage: ${data.damage} (${data.effectiveness})`, '#5eff81');
+                if (data.inflictedStatus) {
+                    addLog(`Musuh terkena status: ${data.inflictedStatus}`, '#cc66ff');
+                }
+                updateBattleUI(data);
+
+                if (!data.enemyAlive) {
+                    addLog('Musuh kalah! 🏆', '#ffd966');
+                document.getElementById('menu-main').style.display = 'none';
+                setTimeout(() => { window.location.href = '/home'; }, 2000);
+                } else {
+                    if (data.enemyAttackMessage) {
+                        addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
+                    }
+                    updateBattleUI(data);
+                    if (data.playerAlive !== undefined && !data.playerAlive) {
+                        addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
+                        document.getElementById('menu-main').style.display = 'none';
+                        setTimeout(() => { window.location.href = '/home'; }, 2000);
+                    }
+                }
+            } catch (err) {
+                addLog('Error: ' + err.message, '#ff5e5e');
+                console.error(err);
+            }
+        }
+
+        async function executeItem(itemName) {
+            toggleMenu('menu-main');
+            addLog(`Menggunakan ${itemName}...`, "#ffd966");
+            try {
+                const response = await fetch('/api/battle/item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ itemName: itemName })
+                });
+                const data = await response.json();
+                if (data.error) {
+                    addLog(data.error, '#ff9999');
+                    return;
+                }
+                addLog(data.message, '#5eff81');
+                if (data.playerCurrentHp !== undefined) {
+                    document.getElementById('player-hp-text').textContent = data.playerCurrentHp + ' / ' + data.playerMaxHp;
+                    const pct = (data.playerCurrentHp / data.playerMaxHp * 100);
+                    document.getElementById('player-hp-bar').style.width = pct + '%';
+                }
+            } catch (err) {
+                addLog('Error: ' + err.message, '#ff5e5e');
+            }
+        }
+
+        async function executeCatch() {
+            addLog("Melempar Pokéball...", "#ffd966");
+            try {
+                const response = await fetch('/api/battle/catch', { method: 'POST' });
+                const data = await response.json();
+                if (data.caught) {
+                    addLog(data.message, '#5eff81');
+                    document.getElementById('menu-main').style.display = 'none';
+                    // Redirect setelah berhasil menangkap
+                    setTimeout(() => { window.location.href = '/home'; }, 2000);
+                } else {
+                    addLog(data.message, '#ff9999');
+                    if (data.enemyAttackMessage) {
+                        addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
+                        updateBattleUI(data);
+                    }
+                    // Cek jika player mati setelah serangan balik
+                    if (data.playerAlive !== undefined && !data.playerAlive) {
+                        addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
+                        document.getElementById('menu-main').style.display = 'none';
+                        setTimeout(() => { window.location.href = '/home'; }, 2000);
+                    }
+                }
+            } catch (err) {
+                addLog('Error: ' + err.message, '#ff5e5e');
+            }
+        }
+
+        function updateBattleUI(data) {
+            if (data.enemyCurrentHp !== undefined && data.enemyMaxHp) {
+                document.getElementById('enemy-hp-text').textContent = data.enemyCurrentHp + ' / ' + data.enemyMaxHp;
+                const enemyPercent = (data.enemyCurrentHp / data.enemyMaxHp * 100);
+                document.getElementById('enemy-hp-bar').style.width = enemyPercent + '%';
+            }
+            if (data.playerCurrentHp !== undefined && data.playerMaxHp) {
+                document.getElementById('player-hp-text').textContent = data.playerCurrentHp + ' / ' + data.playerMaxHp;
+                const playerPercent = (data.playerCurrentHp / data.playerMaxHp * 100);
+                document.getElementById('player-hp-bar').style.width = playerPercent + '%';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDeployScreen);
+    </script>
 </body>
 </html>

@@ -64,34 +64,48 @@ public class PokemonDAO {
     public static List<Skill> getRandomEnemyMoves(PokemonType enemyType) {
         List<Skill> moves = new ArrayList<>();
 
-        String normalSql = "SELECT id, name, type_id, power, accuracy FROM skill " +
-                           "JOIN types ON skill.type_id = types.id " +
-                           "WHERE types.name = 'NORMAL' ORDER BY RANDOM() LIMIT 1";
-        String elementSql = "SELECT id, name, type_id, power, accuracy FROM skill " +
-                            "JOIN types ON skill.type_id = types.id " +
-                            "WHERE types.name = ? ORDER BY RANDOM() LIMIT 3";
+        String normalSql = "SELECT s.id, s.name, t.name AS type_name, s.power, s.accuracy " +
+                        "FROM skill s JOIN types t ON s.type_id = t.id " +
+                        "WHERE t.name = 'NORMAL' ORDER BY RANDOM() LIMIT 1";
+
+        String elementSql = "SELECT s.id, s.name, t.name AS type_name, s.power, s.accuracy " +
+                            "FROM skill s JOIN types t ON s.type_id = t.id " +
+                            "WHERE t.name = ? ORDER BY RANDOM() LIMIT 3";
 
         try (Connection conn = Database.getConnection()) {
             // 1 Normal
-            try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery(normalSql);
+            try (Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(normalSql)) {
                 if (rs.next()) {
-                    moves.add(new Skill(rs.getInt("id"), rs.getString("name"),
-                                        PokemonType.NORMAL,
-                                        rs.getInt("power"), rs.getInt("accuracy")));
+                    String typeName = rs.getString("type_name");
+                    moves.add(new Skill(
+                        rs.getInt("id"),          // sekarang s.id jelas
+                        rs.getString("name"),
+                        PokemonType.valueOf(typeName),
+                        rs.getInt("power"),
+                        rs.getInt("accuracy")
+                    ));
                 }
             }
-            // 3 Elemen (sesuai tipe musuh)
+
+            // 3 Elemen
             try (PreparedStatement pstmt = conn.prepareStatement(elementSql)) {
                 pstmt.setString(1, enemyType.name());
-                ResultSet rs = pstmt.executeQuery();
-                while (rs.next() && moves.size() < 4) {
-                    moves.add(new Skill(rs.getInt("id"), rs.getString("name"),
-                                        enemyType,
-                                        rs.getInt("power"), rs.getInt("accuracy")));
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next() && moves.size() < 4) {
+                        String typeName = rs.getString("type_name");
+                        moves.add(new Skill(
+                            rs.getInt("id"),
+                            rs.getString("name"),
+                            PokemonType.valueOf(typeName),
+                            rs.getInt("power"),
+                            rs.getInt("accuracy")
+                        ));
+                    }
                 }
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
+            System.err.println("Error in getRandomEnemyMoves:");
             e.printStackTrace();
         }
         return moves;

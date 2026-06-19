@@ -1,13 +1,15 @@
 package pokemonbattle.controller;
 
 import pokemonbattle.database.PokemonDAO;
+import pokemonbattle.database.Database;
 import pokemonbattle.models.*;
 import pokemonbattle.service.BattleService;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
+import java.sql.*;
 import java.util.*;
 
 @RestController
@@ -21,34 +23,22 @@ public class BattleController {
     @PostMapping("/start")
     public Map<String, Object> startBattle(@RequestBody StartRequest request, HttpSession session) {
         int playerPokemonId = request.getPlayerPokemonId();
-
-        // Ambil data player & musuh
         PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(playerPokemonId);
         PokemonDAO.PokemonData enemy = PokemonDAO.getRandomPokemon();
+        if (player == null || enemy == null) return Map.of("error", "Pokémon tidak ditemukan");
 
-        if (player == null || enemy == null) {
-            return Map.of("error", "Pokémon tidak ditemukan");
-        }
-
-        // Hitung HP musuh (2.5x)
         int enemyMaxHp = (int) (enemy.getMaxHp() * 2.5);
         int enemyCurrentHp = enemyMaxHp;
-
-        // Ambil moveset musuh (4 skill: 1 Normal + 3 tipe musuh)
         List<Skill> enemyMoves = PokemonDAO.getRandomEnemyMoves(enemy.getType());
 
-        // Simpan state di session
         BattleState state = new BattleState(
-            player.getId(),
-            enemy.getId(),
-            player.getHp(),
-            player.getMaxHp(),
-            enemyCurrentHp,
-            enemyMaxHp
+            player.getId(), enemy.getId(),
+            player.getHp(), player.getMaxHp(),
+            enemyCurrentHp, enemyMaxHp
         );
         session.setAttribute("battleState", state);
+        session.setAttribute("enemyMoves", enemyMoves);
 
-        // Response ke frontend
         Map<String, Object> resp = new HashMap<>();
         resp.put("message", "Pertarungan dimulai!");
         resp.put("player", pokemonToMap(player));
@@ -64,113 +54,242 @@ public class BattleController {
     @PostMapping("/attack")
     public Map<String, Object> attack(@RequestBody AttackRequest request, HttpSession session) {
         BattleState state = (BattleState) session.getAttribute("battleState");
-        if (state == null) {
-            return Map.of("error", "Tidak ada pertarungan aktif");
-        }
+        if (state == null) return Map.of("error", "Tidak ada pertarungan aktif");
 
-        int skillSlot = request.getSkillSlot(); // 1-4
-        if (skillSlot < 1 || skillSlot > 4) {
-            return Map.of("error", "Skill tidak valid");
-        }
+        int skillSlot = request.getSkillSlot();
+        if (skillSlot < 1 || skillSlot > 4) return Map.of("error", "Skill tidak valid");
 
-        // Ambil skill pemain (hardcode dulu, nanti bisa dari database)
-        // Asumsi: kita butuh data skill pemain. Untuk sementara, kita ambil skill dari ID yang dikirim
-        // atau buat DAO. Saya akan gunakan dummy skill jika belum ada.
-        Skill playerSkill = getPlayerSkill(state.getPlayerPokemonId(), skillSlot); // implementasi di bawah
-
-        // Ambil data Pokémon
+        Skill playerSkill = getPlayerSkill(state.getPlayerPokemonId(), skillSlot);
         PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(state.getPlayerPokemonId());
         PokemonDAO.PokemonData enemy = PokemonDAO.getPokemonById(state.getEnemyPokemonId());
 
-        if (playerSkill == null || player == null || enemy == null) {
+        if (playerSkill == null || player == null || enemy == null)
             return Map.of("error", "Data tidak lengkap");
-        }
+
+        Map<String, Object> resp = new HashMap<>();
 
         // Cek akurasi
         if (!battleService.isHit(playerSkill.getAccuracy())) {
-            Map<String, Object> resp = new HashMap<>();
             resp.put("hit", false);
             resp.put("message", "Serangan meleset!");
-            // Giliran musuh tetap jalan? Sesuai desain, mungkin musuh balas.
-            enemyTurn(state, session, enemy);
+            // tetap panggil enemyTurn agar musuh jalan
+            enemyTurn(state, session, enemy, resp);
+            // selalu kirim HP terbaru
+            resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
+            resp.put("enemyMaxHp", state.getEnemyMaxHp());
+            resp.put("playerCurrentHp", state.getPlayerCurrentHp());
+            resp.put("playerMaxHp", state.getPlayerMaxHp());
+            // 🔥 TAMBAHKAN INI: status hidup
+            resp.put("enemyAlive", state.isEnemyAlive());
+            resp.put("playerAlive", state.isPlayerAlive());
             return resp;
         }
 
         // Hitung damage
         int damage = battleService.calculateDamage(
-            playerSkill.getPower(),
-            player.getAttack(),
-            enemy.getDefense(),
-            playerSkill.getType(),
-            enemy.getType()
+            playerSkill.getPower(), player.getAttack(), enemy.getDefense(),
+            playerSkill.getType(), enemy.getType()
         );
-
-        // Kurangi HP musuh
         state.reduceEnemyHp(damage);
 
-        // Cek status efek
         Status inflicted = battleService.tryInflictStatus(playerSkill.getType());
-        if (inflicted != null) {
-            state.setEnemyStatus(inflicted);
-        }
+        if (inflicted != null) state.setEnemyStatus(inflicted);
 
-        // Efektivitas
-        String effectiveness = battleService.getEffectivenessText(playerSkill.getType(), enemy.getType());
-
-        Map<String, Object> resp = new HashMap<>();
         resp.put("hit", true);
         resp.put("damage", damage);
-        resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
-        resp.put("effectiveness", effectiveness);
+        resp.put("effectiveness", battleService.getEffectivenessText(playerSkill.getType(), enemy.getType()));
         resp.put("inflictedStatus", inflicted != null ? inflicted.name() : null);
-        resp.put("enemyAlive", state.isEnemyAlive());
+        resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
+        resp.put("enemyMaxHp", state.getEnemyMaxHp());
 
         if (!state.isEnemyAlive()) {
+            resp.put("enemyAlive", false);
             resp.put("message", "Musuh kalah!");
-            session.removeAttribute("battleState");
-        } else {
-            // Giliran musuh
-            enemyTurn(state, session, enemy);
             resp.put("playerCurrentHp", state.getPlayerCurrentHp());
-            resp.put("playerAlive", state.isPlayerAlive());
+            resp.put("playerMaxHp", state.getPlayerMaxHp());
+            resp.put("playerAlive", true);
+            session.removeAttribute("battleState");
+            return resp;
         }
 
+        // Giliran musuh
+        enemyTurn(state, session, enemy, resp);
+        // Selalu kirim data HP terbaru setelah musuh menyerang
+        resp.put("playerCurrentHp", state.getPlayerCurrentHp());
+        resp.put("playerMaxHp", state.getPlayerMaxHp());
+        // 🔥 TAMBAHKAN: status hidup (enemy pasti hidup karena sudah dicek di atas)
+        resp.put("enemyAlive", true);
+        resp.put("playerAlive", state.isPlayerAlive());
         return resp;
     }
 
-    // ========== GILIRAN MUSUH SEDERHANA ==========
-    private void enemyTurn(BattleState state, HttpSession session, PokemonDAO.PokemonData enemy) {
+    // ========== MENGGUNAKAN ITEM ==========
+    @PostMapping("/item")
+    public Map<String, Object> useItem(@RequestBody ItemRequest request, HttpSession session) {
+        BattleState state = (BattleState) session.getAttribute("battleState");
+        if (state == null) return Map.of("error", "Tidak ada pertarungan aktif");
+
+        String itemName = request.getItemName();
+        String username = (String) session.getAttribute("currentUser");
+        if (username == null) return Map.of("error", "Tidak login");
+
+        try (Connection conn = Database.getConnection()) {
+            PreparedStatement psItem = conn.prepareStatement("SELECT id, effect_value, type FROM item WHERE name = ?");
+            psItem.setString(1, itemName);
+            ResultSet rsItem = psItem.executeQuery();
+            if (!rsItem.next()) return Map.of("error", "Item tidak ditemukan");
+
+            int itemId = rsItem.getInt("id");
+            int effect = rsItem.getInt("effect_value");
+            String type = rsItem.getString("type");
+
+            // Cek kuantitas
+            PreparedStatement psInv = conn.prepareStatement(
+                "SELECT ui.quantity FROM user_inventory ui JOIN users u ON ui.user_id = u.id WHERE u.username = ? AND ui.item_id = ?"
+            );
+            psInv.setString(1, username);
+            psInv.setInt(2, itemId);
+            ResultSet rsInv = psInv.executeQuery();
+            if (!rsInv.next() || rsInv.getInt(1) <= 0) {
+                return Map.of("error", "Item tidak tersedia");
+            }
+
+            // Kurangi quantity
+            PreparedStatement psUpdate = conn.prepareStatement(
+                "UPDATE user_inventory SET quantity = quantity - 1 WHERE user_id = (SELECT id FROM users WHERE username = ?) AND item_id = ?"
+            );
+            psUpdate.setString(1, username);
+            psUpdate.setInt(2, itemId);
+            psUpdate.executeUpdate();
+
+            if (type.equals("HEAL")) {
+                int newHp = Math.min(state.getPlayerCurrentHp() + effect, state.getPlayerMaxHp());
+                state.setPlayerCurrentHp(newHp);
+                return Map.of("message", "Menggunakan " + itemName + " memulihkan " + effect + " HP!",
+                              "playerCurrentHp", newHp, "playerMaxHp", state.getPlayerMaxHp());
+            } else if (type.equals("CURE")) {
+                state.setPlayerStatus(Status.NONE);
+                return Map.of("message", "Menggunakan " + itemName + " menyembuhkan status!",
+                              "playerStatus", "NONE");
+            }
+            return Map.of("message", "Item " + itemName + " digunakan, tetapi tidak ada efek langsung.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Map.of("error", "Gagal menggunakan item");
+        }
+    }
+
+    // ========== MENCOBA MENANGKAP ==========
+    @PostMapping("/catch")
+    public Map<String, Object> catchPokemon(HttpSession session) {
+        BattleState state = (BattleState) session.getAttribute("battleState");
+        if (state == null) return Map.of("error", "Tidak ada pertarungan aktif");
+
+        boolean success = battleService.isCatchSuccessful(state.getEnemyCurrentHp(), state.getEnemyMaxHp());
+        Map<String, Object> resp = new HashMap<>();
+
+        if (success) {
+            String username = (String) session.getAttribute("currentUser");
+            if (username != null) {
+                try (Connection conn = Database.getConnection()) {
+                    PreparedStatement psUser = conn.prepareStatement("SELECT id FROM users WHERE username = ?");
+                    psUser.setString(1, username);
+                    ResultSet rsUser = psUser.executeQuery();
+                    if (rsUser.next()) {
+                        int userId = rsUser.getInt(1);
+                        PreparedStatement psInsert = conn.prepareStatement("INSERT INTO user_pokemon (user_id, pokemon_id) VALUES (?, ?)");
+                        psInsert.setInt(1, userId);
+                        psInsert.setInt(2, state.getEnemyPokemonId());
+                        psInsert.executeUpdate();
+                    }
+                } catch (Exception e) { e.printStackTrace(); }
+            }
+            session.removeAttribute("battleState");
+            resp.put("caught", true);
+            resp.put("message", "Berhasil menangkap Pokémon liar!");
+            // 🔥 TAMBAHKAN: battle selesai, bisa redirect
+            resp.put("battleEnd", true);
+        } else {
+            resp.put("caught", false);
+            resp.put("message", "Gagal menangkap! Pokémon liar menyerang balik.");
+            PokemonDAO.PokemonData enemy = PokemonDAO.getPokemonById(state.getEnemyPokemonId());
+            if (enemy != null) {
+                enemyTurn(state, session, enemy, resp);
+            }
+            // Kirim HP terbaru setelah serangan musuh
+            resp.put("playerCurrentHp", state.getPlayerCurrentHp());
+            resp.put("playerMaxHp", state.getPlayerMaxHp());
+            resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
+            resp.put("enemyMaxHp", state.getEnemyMaxHp());
+            // 🔥 TAMBAHKAN: status hidup
+            resp.put("enemyAlive", state.isEnemyAlive());
+            resp.put("playerAlive", state.isPlayerAlive());
+        }
+        return resp;
+    }
+
+    // ========== GILIRAN MUSUH ==========
+    @SuppressWarnings("unchecked")
+    private void enemyTurn(BattleState state, HttpSession session, PokemonDAO.PokemonData enemy, Map<String, Object> resp) {
         if (!state.isEnemyAlive() || !state.isPlayerAlive()) return;
 
-        // Ambil skill random dari enemy moves (simpan di session)
-        @SuppressWarnings("unchecked")
+        // Status damage musuh
+        if (state.getEnemyStatus() != Status.NONE) {
+            int statusDmg = battleService.getStatusDamage(state.getEnemyStatus(), state.getEnemyMaxHp());
+            if (statusDmg > 0) {
+                state.reduceEnemyHp(statusDmg);
+                resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
+                if (!state.isEnemyAlive()) {
+                    resp.put("enemyAlive", false);
+                    resp.put("message", "Musuh kalah karena efek status!");
+                    session.removeAttribute("battleState");
+                    return;
+                }
+            }
+        }
+
+        // Cek apakah musuh bisa bergerak
+        if (state.getEnemyStatus() != Status.NONE && !battleService.canMove(state.getEnemyStatus())) {
+            resp.put("enemyAttackMessage", "Musuh tidak bisa bergerak karena " + state.getEnemyStatus() + "!");
+            return;
+        }
+
         List<Skill> enemyMoves = (List<Skill>) session.getAttribute("enemyMoves");
         if (enemyMoves == null || enemyMoves.isEmpty()) {
-            // fallback: ambil lagi
             enemyMoves = PokemonDAO.getRandomEnemyMoves(enemy.getType());
             session.setAttribute("enemyMoves", enemyMoves);
         }
         Skill enemySkill = enemyMoves.get(new Random().nextInt(enemyMoves.size()));
 
-        // Kalkulasi damage (player = attacker? No, enemy attacks player)
         PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(state.getPlayerPokemonId());
         if (player == null) return;
 
         int damage = battleService.calculateDamage(
-            enemySkill.getPower(),
-            enemy.getAttack(),
-            player.getDefense(),
-            enemySkill.getType(),
-            player.getType()
+            enemySkill.getPower(), enemy.getAttack(), player.getDefense(),
+            enemySkill.getType(), player.getType()
         );
-
         state.reducePlayerHp(damage);
+
+        resp.put("enemyAttackMessage", "Musuh menggunakan " + enemySkill.getName() + "!");
+        resp.put("enemyAttackDamage", damage);
+        resp.put("playerCurrentHp", state.getPlayerCurrentHp());
+        resp.put("playerMaxHp", state.getPlayerMaxHp());
+
         if (!state.isPlayerAlive()) {
+            resp.put("playerAlive", false);
+            resp.put("message", "Pokémonmu kalah...");
             session.removeAttribute("battleState");
         }
     }
 
     // ========== HELPER ==========
+    private Skill getPlayerSkill(int playerPokemonId, int slot) {
+        PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(playerPokemonId);
+        if (player == null) return null;
+        List<Skill> moves = PokemonDAO.getRandomEnemyMoves(player.getType());
+        return (moves.size() >= slot) ? moves.get(slot - 1) : null;
+    }
+
     private Map<String, Object> pokemonToMap(PokemonDAO.PokemonData p) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", p.getId());
@@ -184,20 +303,7 @@ public class BattleController {
         return map;
     }
 
-    // Dummy skill player (nanti disesuaikan dengan mekanik sebenarnya)
-    private Skill getPlayerSkill(int playerPokemonId, int slot) {
-        // Sementara, ambil 4 skill acak sesuai tipe Pokémon pemain
-        PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(playerPokemonId);
-        if (player == null) return null;
-        // Ambil moveset sementara (seperti musuh)
-        List<Skill> moves = PokemonDAO.getRandomEnemyMoves(player.getType());
-        if (moves.size() >= slot) {
-            return moves.get(slot - 1);
-        }
-        return null;
-    }
-
-    // ========== DTO CLASSES ==========
+    // ========== DTO ==========
     static class StartRequest {
         private int playerPokemonId;
         public int getPlayerPokemonId() { return playerPokemonId; }
@@ -208,5 +314,11 @@ public class BattleController {
         private int skillSlot;
         public int getSkillSlot() { return skillSlot; }
         public void setSkillSlot(int skillSlot) { this.skillSlot = skillSlot; }
+    }
+
+    static class ItemRequest {
+        private String itemName;
+        public String getItemName() { return itemName; }
+        public void setItemName(String itemName) { this.itemName = itemName; }
     }
 }
