@@ -10,61 +10,62 @@ import java.util.List;
 import java.util.Map;
 
 public class InitDB {
+
     public static void initialize() {
-        
-        String createTypesTableSQL = "CREATE TABLE IF NOT EXISTS types (" +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                                "name TEXT UNIQUE);";
 
-        String createUsersTableSQL = "CREATE TABLE IF NOT EXISTS users (" +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                                "username TEXT UNIQUE, " +
-                                "password TEXT, " +
-                                "wins INTEGER DEFAULT 0, " +
-                                "losses INTEGER DEFAULT 0);";
+        String createTypesTableSQL = "CREATE TABLE IF NOT EXISTS types ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "name TEXT UNIQUE);";
 
-        String createPokemonTableSQL = "CREATE TABLE IF NOT EXISTS pokemon (" +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                                "name TEXT, hp INTEGER, max_hp INTEGER, " +
-                                "attack INTEGER, defense INTEGER, speed INTEGER, " +
-                                "type_id INTEGER, " +
-                                "rarity TEXT, " +
-                                "FOREIGN KEY (type_id) REFERENCES types(id));";
+        String createUsersTableSQL = "CREATE TABLE IF NOT EXISTS users ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "username TEXT UNIQUE, "
+                + "password TEXT, "
+                + "wins INTEGER DEFAULT 0, "
+                + "losses INTEGER DEFAULT 0);";
 
-        String createUserPokemonTableSQL = "CREATE TABLE IF NOT EXISTS user_pokemon (" +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                                "user_id INTEGER, " +
-                                "pokemon_id INTEGER, " +
-                                "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                                "FOREIGN KEY (pokemon_id) REFERENCES pokemon(id));";
+        String createPokemonTableSQL = "CREATE TABLE IF NOT EXISTS pokemon ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "name TEXT, hp INTEGER, max_hp INTEGER, "
+                + "attack INTEGER, defense INTEGER, speed INTEGER, "
+                + "type_id INTEGER, "
+                + "rarity TEXT, "
+                + "FOREIGN KEY (type_id) REFERENCES types(id));";
 
-        String createSkillTableSQL = "CREATE TABLE IF NOT EXISTS skill (" +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                                "name TEXT UNIQUE, " +
-                                "type_id INTEGER, " +
-                                "power INTEGER, " +
-                                "accuracy INTEGER, " +
-                                "FOREIGN KEY (type_id) REFERENCES types(id));";
+        String createUserPokemonTableSQL = "CREATE TABLE IF NOT EXISTS user_pokemon ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "user_id INTEGER, "
+                + "pokemon_id INTEGER, "
+                + "hp INTEGER DEFAULT 100, "
+                +"FOREIGN KEY (user_id) REFERENCES users(id), "
+                + "FOREIGN KEY (pokemon_id) REFERENCES pokemon(id));";
 
-        String createItemTableSQL = "CREATE TABLE IF NOT EXISTS item (" +
-                                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                                "name TEXT UNIQUE, " +
-                                "description TEXT, " +
-                                "effect_value INTEGER, " +
-                                "type TEXT);";
+        String createSkillTableSQL = "CREATE TABLE IF NOT EXISTS skill ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "name TEXT UNIQUE, "
+                + "type_id INTEGER, "
+                + "power INTEGER, "
+                + "accuracy INTEGER, "
+                + "FOREIGN KEY (type_id) REFERENCES types(id));";
 
-        String createInventoryTableSQL = "CREATE TABLE IF NOT EXISTS user_inventory (" +
-                                "user_id INTEGER, " +
-                                "item_id INTEGER, " +
-                                "quantity INTEGER DEFAULT 0, " +
-                                "PRIMARY KEY (user_id, item_id), " +
-                                "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                                "FOREIGN KEY (item_id) REFERENCES item(id));";
+        String createItemTableSQL = "CREATE TABLE IF NOT EXISTS item ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "name TEXT UNIQUE, "
+                + "description TEXT, "
+                + "effect_value INTEGER, "
+                + "type TEXT);";
 
-        try (Connection conn = Database.getConnection();
-             Statement stmt = conn.createStatement()) {
-            
-            stmt.execute("PRAGMA foreign_keys = ON;"); 
+        String createInventoryTableSQL = "CREATE TABLE IF NOT EXISTS user_inventory ("
+                + "user_id INTEGER, "
+                + "item_id INTEGER, "
+                + "quantity INTEGER DEFAULT 0, "
+                + "PRIMARY KEY (user_id, item_id), "
+                + "FOREIGN KEY (user_id) REFERENCES users(id), "
+                + "FOREIGN KEY (item_id) REFERENCES item(id));";
+
+        try (Connection conn = Database.getConnection(); Statement stmt = conn.createStatement()) {
+
+            stmt.execute("PRAGMA foreign_keys = ON;");
 
             stmt.execute(createTypesTableSQL);
             stmt.execute(createUsersTableSQL);
@@ -103,10 +104,10 @@ public class InitDB {
             if (rsPoke.next() && rsPoke.getInt(1) == 0) {
                 System.out.println(">>> Mengisi database dengan 100 Pokémon awal... <<<");
                 String insertSQL = "INSERT INTO pokemon (name, hp, max_hp, attack, defense, speed, type_id, rarity) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-                
+
                 List<String> legendaries = Arrays.asList(
-                    "Entei", "Ho-Oh", "Suicune", "Kyogre", "Virizion", "Zapdos", 
-                    "Raikou", "Zekrom", "Thundurus", "Articuno", "Regice", "Kyurem"
+                        "Entei", "Ho-Oh", "Suicune", "Kyogre", "Virizion", "Zapdos",
+                        "Raikou", "Zekrom", "Thundurus", "Articuno", "Regice", "Kyurem"
                 );
 
                 try (PreparedStatement pstmt = conn.prepareStatement(insertSQL)) {
@@ -118,7 +119,6 @@ public class InitDB {
                         {"Raikou", 170, 170, 105, 95, 115, "ELECTRIC"}, {"Zekrom", 180, 180, 170, 140, 90, "ELECTRIC"},
                         {"Thundurus", 160, 160, 135, 90, 111, "ELECTRIC"}, {"Articuno", 170, 170, 105, 120, 85, "ICE"},
                         {"Regice", 160, 160, 70, 150, 50, "ICE"}, {"Kyurem", 200, 200, 150, 110, 95, "ICE"},
-                        
                         // TIPE FIRE
                         {"Charizard", 140, 140, 105, 100, 100, "FIRE"}, {"Ninetales", 135, 135, 95, 95, 100, "FIRE"},
                         {"Arcanine", 150, 150, 130, 100, 95, "FIRE"}, {"Rapidash", 130, 130, 120, 90, 105, "FIRE"},
@@ -128,7 +128,6 @@ public class InitDB {
                         {"Magmortar", 140, 140, 115, 85, 83, "FIRE"}, {"Emboar", 180, 180, 145, 85, 65, "FIRE"},
                         {"Darmanitan", 170, 170, 160, 75, 95, "FIRE"}, {"Chandelure", 125, 125, 75, 110, 80, "FIRE"},
                         {"Volcarona", 150, 150, 80, 85, 100, "FIRE"},
-                        
                         // TIPE WATER
                         {"Blastoise", 140, 140, 105, 120, 78, "WATER"}, {"Golduck", 140, 140, 100, 95, 85, "WATER"},
                         {"Poliwrath", 150, 150, 115, 115, 70, "WATER"}, {"Tentacruel", 140, 140, 90, 85, 100, "WATER"},
@@ -138,7 +137,6 @@ public class InitDB {
                         {"Milotic", 160, 160, 80, 95, 81, "WATER"}, {"Empoleon", 150, 150, 105, 105, 60, "WATER"},
                         {"Samurott", 160, 160, 120, 105, 70, "WATER"}, {"Seismitoad", 170, 170, 115, 95, 74, "WATER"},
                         {"Jellicent", 170, 170, 80, 90, 60, "WATER"},
-                        
                         // TIPE GRASS
                         {"Venusaur", 140, 140, 100, 100, 80, "GRASS"}, {"Vileplume", 135, 135, 100, 105, 50, "GRASS"},
                         {"Victreebel", 140, 140, 125, 85, 70, "GRASS"}, {"Exeggutor", 160, 160, 115, 105, 55, "GRASS"},
@@ -148,7 +146,6 @@ public class InitDB {
                         {"Roserade", 125, 125, 90, 85, 90, "GRASS"}, {"Leafeon", 130, 130, 130, 150, 95, "GRASS"},
                         {"Serperior", 135, 135, 95, 115, 113, "GRASS"}, {"Leavanny", 135, 135, 125, 100, 92, "GRASS"},
                         {"Lilligant", 135, 135, 80, 95, 90, "GRASS"}, {"Amoonguss", 180, 180, 105, 90, 30, "GRASS"},
-                        
                         // TIPE ELECTRIC
                         {"Raichu", 125, 125, 110, 75, 110, "ELECTRIC"}, {"Electrode", 125, 125, 70, 90, 150, "ELECTRIC"},
                         {"Jolteon", 130, 130, 85, 80, 130, "ELECTRIC"}, {"Ampharos", 150, 150, 95, 105, 55, "ELECTRIC"},
@@ -157,7 +154,6 @@ public class InitDB {
                         {"Zebstrika", 135, 135, 120, 80, 116, "ELECTRIC"}, {"Galvantula", 135, 135, 95, 80, 108, "ELECTRIC"},
                         {"Eelektross", 150, 150, 135, 100, 50, "ELECTRIC"}, {"Stunfisk", 170, 170, 85, 100, 32, "ELECTRIC"},
                         {"Emolga", 120, 120, 95, 80, 103, "ELECTRIC"},
-                        
                         // TIPE ICE
                         {"Dewgong", 150, 150, 90, 100, 70, "ICE"}, {"Cloyster", 115, 115, 115, 180, 70, "ICE"},
                         {"Jynx", 130, 130, 70, 55, 95, "ICE"}, {"Lapras", 200, 200, 105, 100, 60, "ICE"},
@@ -166,7 +162,6 @@ public class InitDB {
                         {"Glaceon", 130, 130, 80, 130, 65, "ICE"}, {"Froslass", 135, 135, 100, 90, 110, "ICE"},
                         {"Mamoswine", 180, 180, 150, 100, 80, "ICE"}, {"Vanilluxe", 135, 135, 115, 105, 79, "ICE"},
                         {"Beartic", 160, 160, 150, 100, 50, "ICE"},
-                        
                         // TIPE POISON
                         {"Arbok", 125, 125, 105, 85, 80, "POISON"}, {"Nidoqueen", 150, 150, 110, 105, 76, "POISON"},
                         {"Nidoking", 145, 145, 120, 95, 85, "POISON"}, {"Muk", 170, 170, 125, 95, 50, "POISON"},
@@ -177,7 +172,7 @@ public class InitDB {
                         {"Drapion", 135, 135, 110, 130, 95, "POISON"}, {"Toxicroak", 145, 145, 126, 85, 85, "POISON"},
                         {"Garbodor", 150, 150, 115, 102, 75, "POISON"}, {"Scolipede", 150, 150, 120, 109, 112, "POISON"}
                     };
-                    
+
                     for (Object[] p : pokemonData) {
                         String pokeName = (String) p[0];
                         pstmt.setString(1, pokeName);
@@ -187,7 +182,7 @@ public class InitDB {
                         pstmt.setInt(5, (int) p[4]);
                         pstmt.setInt(6, (int) p[5]);
                         pstmt.setInt(7, typeMap.get((String) p[6]));
-                        
+
                         if (legendaries.contains(pokeName)) {
                             pstmt.setString(8, "LEGENDARY");
                         } else {
@@ -233,59 +228,59 @@ public class InitDB {
                 String insertSkillSQL = "INSERT INTO skill (name, type_id, power, accuracy) VALUES (?, ?, ?, ?)";
                 try (PreparedStatement pstmtSkill = conn.prepareStatement(insertSkillSQL)) {
                     Object[][] skillData = {
-                        {"Ember","FIRE",40,100}, {"Flamethrower","FIRE",90,100}, {"Fire Blast","FIRE",110,85}, 
-                        {"Flame Wheel","FIRE",60,100}, {"Fire Punch","FIRE",75,100}, {"Flare Blitz","FIRE",120,100}, 
-                        {"Heat Wave","FIRE",95,90}, {"Overheat","FIRE",130,90}, {"Fire Fang","FIRE",65,95}, 
-                        {"Flame Charge","FIRE",50,100}, {"Lava Plume","FIRE",80,100}, {"Magma Storm","FIRE",100,75}, 
-                        {"Blast Burn","FIRE",150,90}, {"Eruption","FIRE",150,100}, {"Mystical Fire","FIRE",75,100}, 
-                        {"Incinerate","FIRE",60,100}, {"Inferno","FIRE",100,50}, {"Flame Burst","FIRE",70,100}, 
-                        {"Sacred Fire","FIRE",100,95}, {"V-create","FIRE",180,95},
-                        {"Water Gun","WATER",40,100}, {"Water Pulse","WATER",60,100}, {"Bubble Beam","WATER",65,100}, 
-                        {"Surf","WATER",90,100}, {"Hydro Pump","WATER",110,80}, {"Waterfall","WATER",80,100}, 
-                        {"Aqua Jet","WATER",40,100}, {"Aqua Tail","WATER",90,90}, {"Dive","WATER",80,100}, 
-                        {"Crabhammer","WATER",100,90}, {"Clamp","WATER",35,85}, {"Whirlpool","WATER",35,85}, 
-                        {"Water Spout","WATER",150,100}, {"Muddy Water","WATER",90,85}, {"Brine","WATER",65,100}, 
-                        {"Scald","WATER",80,100}, {"Origin Pulse","WATER",110,85}, {"Steam Eruption","WATER",110,95}, 
-                        {"Razor Shell","WATER",75,95}, {"Snipe Shot","WATER",80,100},
-                        {"Vine Whip","GRASS",45,100}, {"Razor Leaf","GRASS",55,95}, {"Solar Beam","GRASS",120,100}, 
-                        {"Giga Drain","GRASS",75,100}, {"Magical Leaf","GRASS",60,100}, {"Bullet Seed","GRASS",25,100}, 
-                        {"Seed Bomb","GRASS",80,100}, {"Wood Hammer","GRASS",120,100}, {"Leaf Blade","GRASS",90,100}, 
-                        {"Energy Ball","GRASS",90,100}, {"Leaf Storm","GRASS",130,90}, {"Petal Dance","GRASS",120,100}, 
-                        {"Frenzy Plant","GRASS",150,90}, {"Grass Knot","GRASS",80,100}, {"Power Whip","GRASS",120,85}, 
-                        {"Trop Kick","GRASS",70,100}, {"Solar Blade","GRASS",125,100}, {"Apple Acid","GRASS",80,100}, 
-                        {"Drum Beating","GRASS",80,100}, {"Leaf Tornado","GRASS",65,90},
-                        {"Thunder Shock","ELECTRIC",40,100}, {"Thunderbolt","ELECTRIC",90,100}, {"Thunder","ELECTRIC",110,70}, 
-                        {"Volt Tackle","ELECTRIC",120,100}, {"Spark","ELECTRIC",65,100}, {"Thunder Punch","ELECTRIC",75,100}, 
-                        {"Shock Wave","ELECTRIC",60,100}, {"Discharge","ELECTRIC",80,100}, {"Charge Beam","ELECTRIC",50,90}, 
-                        {"Wild Charge","ELECTRIC",90,100}, {"Zap Cannon","ELECTRIC",120,50}, {"Volt Switch","ELECTRIC",70,100}, 
-                        {"Electroweb","ELECTRIC",55,95}, {"Nuzzle","ELECTRIC",20,100}, {"Zing Zap","ELECTRIC",80,100}, 
-                        {"Aura Wheel","ELECTRIC",110,100}, {"Overdrive","ELECTRIC",80,100}, {"Plasma Fists","ELECTRIC",100,100}, 
-                        {"Bolt Strike","ELECTRIC",130,85}, {"Fusion Bolt","ELECTRIC",100,100},
-                        {"Powder Snow","ICE",40,100}, {"Ice Beam","ICE",90,100}, {"Blizzard","ICE",110,70}, 
-                        {"Ice Punch","ICE",75,100}, {"Aurora Beam","ICE",65,100}, {"Ice Shard","ICE",40,100}, 
-                        {"Ice Fang","ICE",65,95}, {"Avalanche","ICE",60,100}, {"Icicle Crash","ICE",85,90}, 
-                        {"Freeze-Dry","ICE",70,100}, {"Glaciate","ICE",65,95}, {"Frost Breath","ICE",60,90}, 
-                        {"Ice Burn","ICE",140,90}, {"Icicle Spear","ICE",25,100}, {"Icy Wind","ICE",55,95}, 
-                        {"Ice Hammer","ICE",100,90}, {"Triple Axel","ICE",20,90}, {"Mountain Gale","ICE",100,85}, 
-                        {"Glacial Lance","ICE",120,100}, {"Subzero Slammer","ICE",175,100},
-                        {"Poison Sting","POISON",15,100}, {"Sludge","POISON",65,100}, {"Sludge Bomb","POISON",90,100}, 
-                        {"Sludge Wave","POISON",95,100}, {"Poison Jab","POISON",80,100}, {"Gunk Shot","POISON",120,80}, 
-                        {"Poison Fang","POISON",50,100}, {"Cross Poison","POISON",70,100}, {"Clear Smog","POISON",50,100}, 
-                        {"Venoshock","POISON",65,100}, {"Acid","POISON",40,100}, {"Acid Spray","POISON",40,100}, 
-                        {"Belch","POISON",120,90}, {"Smog","POISON",30,70}, {"Poison Tail","POISON",50,100}, 
-                        {"Gastro Acid","POISON",40,100}, {"Mortal Spin","POISON",30,100}, {"Shell Side Arm","POISON",90,100}, 
-                        {"Dire Claw","POISON",80,100}, {"Venom Drench","POISON",60,100},
-                        {"Tackle","NORMAL",40,100}, {"Scratch","NORMAL",40,100}, {"Quick Attack","NORMAL",40,100},
-                        {"Slam","NORMAL",80,75}, {"Body Slam","NORMAL",85,100}, {"Take Down","NORMAL",90,85},
-                        {"Double-Edge","NORMAL",120,100}, {"Hyper Voice","NORMAL",90,100}, {"Headbutt","NORMAL",70,100},
-                        {"Strength","NORMAL",80,100}, {"Mega Punch","NORMAL",80,85}, {"Mega Kick","NORMAL",120,75},
-                        {"Giga Impact","NORMAL",150,90}, {"Hyper Beam","NORMAL",150,90}, {"Rapid Spin","NORMAL",50,100},
-                        {"Cut","NORMAL",50,95}, {"Slash","NORMAL",70,100}, {"Crush Claw","NORMAL",75,95},
-                        {"Facade","NORMAL",70,100}, {"Return","NORMAL",102,100}
+                        {"Ember", "FIRE", 40, 100}, {"Flamethrower", "FIRE", 90, 100}, {"Fire Blast", "FIRE", 110, 85},
+                        {"Flame Wheel", "FIRE", 60, 100}, {"Fire Punch", "FIRE", 75, 100}, {"Flare Blitz", "FIRE", 120, 100},
+                        {"Heat Wave", "FIRE", 95, 90}, {"Overheat", "FIRE", 130, 90}, {"Fire Fang", "FIRE", 65, 95},
+                        {"Flame Charge", "FIRE", 50, 100}, {"Lava Plume", "FIRE", 80, 100}, {"Magma Storm", "FIRE", 100, 75},
+                        {"Blast Burn", "FIRE", 150, 90}, {"Eruption", "FIRE", 150, 100}, {"Mystical Fire", "FIRE", 75, 100},
+                        {"Incinerate", "FIRE", 60, 100}, {"Inferno", "FIRE", 100, 50}, {"Flame Burst", "FIRE", 70, 100},
+                        {"Sacred Fire", "FIRE", 100, 95}, {"V-create", "FIRE", 180, 95},
+                        {"Water Gun", "WATER", 40, 100}, {"Water Pulse", "WATER", 60, 100}, {"Bubble Beam", "WATER", 65, 100},
+                        {"Surf", "WATER", 90, 100}, {"Hydro Pump", "WATER", 110, 80}, {"Waterfall", "WATER", 80, 100},
+                        {"Aqua Jet", "WATER", 40, 100}, {"Aqua Tail", "WATER", 90, 90}, {"Dive", "WATER", 80, 100},
+                        {"Crabhammer", "WATER", 100, 90}, {"Clamp", "WATER", 35, 85}, {"Whirlpool", "WATER", 35, 85},
+                        {"Water Spout", "WATER", 150, 100}, {"Muddy Water", "WATER", 90, 85}, {"Brine", "WATER", 65, 100},
+                        {"Scald", "WATER", 80, 100}, {"Origin Pulse", "WATER", 110, 85}, {"Steam Eruption", "WATER", 110, 95},
+                        {"Razor Shell", "WATER", 75, 95}, {"Snipe Shot", "WATER", 80, 100},
+                        {"Vine Whip", "GRASS", 45, 100}, {"Razor Leaf", "GRASS", 55, 95}, {"Solar Beam", "GRASS", 120, 100},
+                        {"Giga Drain", "GRASS", 75, 100}, {"Magical Leaf", "GRASS", 60, 100}, {"Bullet Seed", "GRASS", 25, 100},
+                        {"Seed Bomb", "GRASS", 80, 100}, {"Wood Hammer", "GRASS", 120, 100}, {"Leaf Blade", "GRASS", 90, 100},
+                        {"Energy Ball", "GRASS", 90, 100}, {"Leaf Storm", "GRASS", 130, 90}, {"Petal Dance", "GRASS", 120, 100},
+                        {"Frenzy Plant", "GRASS", 150, 90}, {"Grass Knot", "GRASS", 80, 100}, {"Power Whip", "GRASS", 120, 85},
+                        {"Trop Kick", "GRASS", 70, 100}, {"Solar Blade", "GRASS", 125, 100}, {"Apple Acid", "GRASS", 80, 100},
+                        {"Drum Beating", "GRASS", 80, 100}, {"Leaf Tornado", "GRASS", 65, 90},
+                        {"Thunder Shock", "ELECTRIC", 40, 100}, {"Thunderbolt", "ELECTRIC", 90, 100}, {"Thunder", "ELECTRIC", 110, 70},
+                        {"Volt Tackle", "ELECTRIC", 120, 100}, {"Spark", "ELECTRIC", 65, 100}, {"Thunder Punch", "ELECTRIC", 75, 100},
+                        {"Shock Wave", "ELECTRIC", 60, 100}, {"Discharge", "ELECTRIC", 80, 100}, {"Charge Beam", "ELECTRIC", 50, 90},
+                        {"Wild Charge", "ELECTRIC", 90, 100}, {"Zap Cannon", "ELECTRIC", 120, 50}, {"Volt Switch", "ELECTRIC", 70, 100},
+                        {"Electroweb", "ELECTRIC", 55, 95}, {"Nuzzle", "ELECTRIC", 20, 100}, {"Zing Zap", "ELECTRIC", 80, 100},
+                        {"Aura Wheel", "ELECTRIC", 110, 100}, {"Overdrive", "ELECTRIC", 80, 100}, {"Plasma Fists", "ELECTRIC", 100, 100},
+                        {"Bolt Strike", "ELECTRIC", 130, 85}, {"Fusion Bolt", "ELECTRIC", 100, 100},
+                        {"Powder Snow", "ICE", 40, 100}, {"Ice Beam", "ICE", 90, 100}, {"Blizzard", "ICE", 110, 70},
+                        {"Ice Punch", "ICE", 75, 100}, {"Aurora Beam", "ICE", 65, 100}, {"Ice Shard", "ICE", 40, 100},
+                        {"Ice Fang", "ICE", 65, 95}, {"Avalanche", "ICE", 60, 100}, {"Icicle Crash", "ICE", 85, 90},
+                        {"Freeze-Dry", "ICE", 70, 100}, {"Glaciate", "ICE", 65, 95}, {"Frost Breath", "ICE", 60, 90},
+                        {"Ice Burn", "ICE", 140, 90}, {"Icicle Spear", "ICE", 25, 100}, {"Icy Wind", "ICE", 55, 95},
+                        {"Ice Hammer", "ICE", 100, 90}, {"Triple Axel", "ICE", 20, 90}, {"Mountain Gale", "ICE", 100, 85},
+                        {"Glacial Lance", "ICE", 120, 100}, {"Subzero Slammer", "ICE", 175, 100},
+                        {"Poison Sting", "POISON", 15, 100}, {"Sludge", "POISON", 65, 100}, {"Sludge Bomb", "POISON", 90, 100},
+                        {"Sludge Wave", "POISON", 95, 100}, {"Poison Jab", "POISON", 80, 100}, {"Gunk Shot", "POISON", 120, 80},
+                        {"Poison Fang", "POISON", 50, 100}, {"Cross Poison", "POISON", 70, 100}, {"Clear Smog", "POISON", 50, 100},
+                        {"Venoshock", "POISON", 65, 100}, {"Acid", "POISON", 40, 100}, {"Acid Spray", "POISON", 40, 100},
+                        {"Belch", "POISON", 120, 90}, {"Smog", "POISON", 30, 70}, {"Poison Tail", "POISON", 50, 100},
+                        {"Gastro Acid", "POISON", 40, 100}, {"Mortal Spin", "POISON", 30, 100}, {"Shell Side Arm", "POISON", 90, 100},
+                        {"Dire Claw", "POISON", 80, 100}, {"Venom Drench", "POISON", 60, 100},
+                        {"Tackle", "NORMAL", 40, 100}, {"Scratch", "NORMAL", 40, 100}, {"Quick Attack", "NORMAL", 40, 100},
+                        {"Slam", "NORMAL", 80, 75}, {"Body Slam", "NORMAL", 85, 100}, {"Take Down", "NORMAL", 90, 85},
+                        {"Double-Edge", "NORMAL", 120, 100}, {"Hyper Voice", "NORMAL", 90, 100}, {"Headbutt", "NORMAL", 70, 100},
+                        {"Strength", "NORMAL", 80, 100}, {"Mega Punch", "NORMAL", 80, 85}, {"Mega Kick", "NORMAL", 120, 75},
+                        {"Giga Impact", "NORMAL", 150, 90}, {"Hyper Beam", "NORMAL", 150, 90}, {"Rapid Spin", "NORMAL", 50, 100},
+                        {"Cut", "NORMAL", 50, 95}, {"Slash", "NORMAL", 70, 100}, {"Crush Claw", "NORMAL", 75, 95},
+                        {"Facade", "NORMAL", 70, 100}, {"Return", "NORMAL", 102, 100}
                     };
                     for (Object[] s : skillData) {
                         pstmtSkill.setString(1, (String) s[0]);
-                        pstmtSkill.setInt(2, typeMap.get((String) s[1])); 
+                        pstmtSkill.setInt(2, typeMap.get((String) s[1]));
                         pstmtSkill.setInt(3, (int) s[2]);
                         pstmtSkill.setInt(4, (int) s[3]);
                         pstmtSkill.addBatch();

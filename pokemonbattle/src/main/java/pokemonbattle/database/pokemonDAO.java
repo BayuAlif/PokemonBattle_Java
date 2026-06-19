@@ -13,9 +13,9 @@ import pokemonbattle.models.Skill;
 
 public class pokemonDAO {
 
-    // Mengambil Pokémon berdasarkan ID (join ke types untuk ambil nama tipe)
+    // Mengambil Pokémon berdasarkan ID (UPDATE: ditambahkan p.rarity)
     public static PokemonData getPokemonById(int pokemonId) {
-        String sql = "SELECT p.id, p.name, p.hp, p.max_hp, p.attack, p.defense, p.speed, t.name AS type_name " +
+        String sql = "SELECT p.id, p.name, p.hp, p.max_hp, p.attack, p.defense, p.speed, p.rarity, t.name AS type_name " +
                      "FROM pokemon p JOIN types t ON p.type_id = t.id WHERE p.id = ?";
         try (Connection conn = Database.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -30,7 +30,8 @@ public class pokemonDAO {
                     rs.getInt("attack"),
                     rs.getInt("defense"),
                     rs.getInt("speed"),
-                    PokemonType.valueOf(rs.getString("type_name"))
+                    PokemonType.valueOf(rs.getString("type_name")),
+                    rs.getString("rarity") 
                 );
             }
         } catch (SQLException e) {
@@ -39,9 +40,9 @@ public class pokemonDAO {
         return null;
     }
 
-    // Mengambil Pokémon acak untuk musuh
+    // Mengambil Pokémon acak untuk musuh (UPDATE: ditambahkan p.rarity)
     public static PokemonData getRandomPokemon() {
-        String sql = "SELECT p.id, p.name, p.hp, p.max_hp, p.attack, p.defense, p.speed, t.name AS type_name " +
+        String sql = "SELECT p.id, p.name, p.hp, p.max_hp, p.attack, p.defense, p.speed, p.rarity, t.name AS type_name " +
                      "FROM pokemon p JOIN types t ON p.type_id = t.id ORDER BY RANDOM() LIMIT 1";
         try (Connection conn = Database.getConnection();
              Statement stmt = conn.createStatement()) {
@@ -55,7 +56,8 @@ public class pokemonDAO {
                     rs.getInt("attack"),
                     rs.getInt("defense"),
                     rs.getInt("speed"),
-                    PokemonType.valueOf(rs.getString("type_name"))
+                    PokemonType.valueOf(rs.getString("type_name")),
+                    rs.getString("rarity") 
                 );
             }
         } catch (SQLException e) {
@@ -83,7 +85,7 @@ public class pokemonDAO {
                 if (rs.next()) {
                     String typeName = rs.getString("type_name");
                     moves.add(new Skill(
-                        rs.getInt("id"),          // sekarang s.id jelas
+                        rs.getInt("id"),
                         rs.getString("name"),
                         PokemonType.valueOf(typeName),
                         rs.getInt("power"),
@@ -115,14 +117,17 @@ public class pokemonDAO {
         return moves;
     }
 
-    // Data sederhana Pokémon (tanpa objek penuh)
+    // =========================================================================
+    // UPDATE DATA POKEMONDATA (DITAMBAHKAN ATRIBUT RARITY & GETTERNYA)
+    // =========================================================================
     public static class PokemonData {
         private int id;
         private String name;
         private int hp, maxHp, attack, defense, speed;
         private PokemonType type;
+        private String rarity;
 
-        public PokemonData(int id, String name, int hp, int maxHp, int attack, int defense, int speed, PokemonType type) {
+        public PokemonData(int id, String name, int hp, int maxHp, int attack, int defense, int speed, PokemonType type, String rarity) {
             this.id = id;
             this.name = name;
             this.hp = hp;
@@ -131,6 +136,7 @@ public class pokemonDAO {
             this.defense = defense;
             this.speed = speed;
             this.type = type;
+            this.rarity = rarity; 
         }
 
         public int getId() { return id; }
@@ -141,5 +147,6 @@ public class pokemonDAO {
         public int getDefense() { return defense; }
         public int getSpeed() { return speed; }
         public PokemonType getType() { return type; }
+        public String getRarity() { return rarity; }
     }
 }

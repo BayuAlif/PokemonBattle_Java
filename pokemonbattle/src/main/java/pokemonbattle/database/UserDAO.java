@@ -13,8 +13,8 @@ public class UserDAO {
 
     public boolean registerUser(User user) {
         String insertUserSQL = "INSERT INTO users (username, password) VALUES (?, ?)";
-        String getRandomPokemonSQL = "SELECT p.id FROM pokemon p JOIN types t ON p.type_id = t.id WHERE t.name = ? AND p.rarity = 'NORMAL' ORDER BY RANDOM() LIMIT 1";
-        String givePokemonSQL = "INSERT INTO user_pokemon (user_id, pokemon_id) VALUES (?, ?)";
+        String getRandomPokemonSQL = "SELECT p.id, p.max_hp FROM pokemon p JOIN types t ON p.type_id = t.id WHERE t.name = ? AND p.rarity = 'NORMAL' ORDER BY RANDOM() LIMIT 1";
+        String givePokemonSQL = "INSERT INTO user_pokemon (user_id, pokemon_id, hp) VALUES (?, ?, ?)";
 
         // Query untuk mencari ID item dan memberikannya ke player
         String getItemIdSQL = "SELECT id FROM item WHERE name = ?";
@@ -60,8 +60,11 @@ public class UserDAO {
                     try (ResultSet rs = getPokeStmt.executeQuery()) {
                         if (rs.next()) {
                             int randomPokemonId = rs.getInt("id");
+                            int maxHp = rs.getInt("max_hp");
+
                             givePokeStmt.setInt(1, newUserId);
                             givePokeStmt.setInt(2, randomPokemonId);
+                            givePokeStmt.setInt(3, maxHp);
                             givePokeStmt.addBatch();
                         }
                     }

@@ -1,362 +1,440 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PokéBattle - Arena</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
     <style>
-        /* CSS Khusus Arena */
+        /* ========================================= */
+        /* CSS KHUSUS ARENA (DESAIN BARU)            */
+        /* ========================================= */
         .battle-arena {
-        background: linear-gradient(to bottom, #2b3a4a, #1a2530);
-        border: 1px solid var(--accent);
-        border-radius: 12px;
-        height: 350px;
-        position: relative;
-        margin-bottom: 20px;
-        overflow: hidden;
+            background:
+                /* Efek hamparan rumput hijau di bagian bawah */
+                linear-gradient(to top, #2e7d32 0%, #4caf50 35%, rgba(0, 0, 0, 0) 35.5%),
+                /* Efek siluet bukit/pegunungan tipis di tengah */
+                linear-gradient(135deg, #a5d6a7 0%, #a5d6a7 100%),
+                /* Efek gradasi langit cerah di bagian atas */
+                linear-gradient(to bottom, #4fc3f7 0%, #e1f5fe 65%);
+            background-size: 100% 100%;
+            border: 3px solid #1e293b;
+            border-radius: 16px;
+            height: 400px;
+            position: relative;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 0 40px rgba(0, 0, 0, 0.2);
         }
+
+        /* Modifikasi warna platform pijakan agar kontras dengan rumput hijau */
+        .arena-platform {
+            position: absolute;
+            width: 180px;
+            height: 45px;
+            background: radial-gradient(ellipse at center, rgba(15, 45, 15, 0.6) 0%, rgba(0, 0, 0, 0) 70%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* Posisi Stat Box (TETAP SEPERTI MILIKMU) */
         .stat-box {
-        background: rgba(20, 20, 20, 0.8);
-        border: 1px solid #444;
-        padding: 15px;
-        border-radius: 10px;
-        width: 250px;
-        position: absolute;
-        z-index: 2;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #334155;
+            padding: 15px;
+            border-radius: 12px;
+            width: 260px;
+            position: absolute;
+            z-index: 10;
+            backdrop-filter: blur(4px);
         }
-        .stat-box.enemy { top: 20px; right: 20px; }
-        .stat-box.player { bottom: 20px; left: 20px; }
-        .hp-bar-bg { background: #333; height: 10px; border-radius: 5px; margin: 8px 0; overflow: hidden; }
-        .hp-bar-fill { background: #5eff81; height: 100%; width: 100%; transition: width 0.3s, background-color 0.3s; }
-        .dashboard { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-        .battle-log { background: rgba(30, 30, 30, 0.6); border: 1px solid #444; padding: 15px; border-radius: 12px; height: 160px; overflow-y: auto; font-family: monospace; font-size: 14px; color: #ddd; }
-        .battle-log p { margin: 0 0 8px 0; }
-        .action-panel { background: rgba(30, 30, 30, 0.6); border: 1px solid var(--accent); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; height: 100%; }
-        .btn-action { background: #222; border: 1px solid #555; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; padding: 10px; }
-        .btn-action:hover { background: var(--accent); border-color: var(--accent); }
-        .deploy-card { background: rgba(30, 30, 30, 0.6); border: 1px solid var(--accent); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .deploy-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(255, 94, 94, 0.3); }
+
+        .stat-box.enemy {
+            top: 20px;
+            right: 20px;
+            border-bottom-left-radius: 25px;
+            border-top-right-radius: 0;
+        }
+
+        .stat-box.player {
+            bottom: 20px;
+            left: 20px;
+            border-top-right-radius: 25px;
+            border-bottom-left-radius: 0;
+        }
+
+        .hp-bar-bg {
+            background: #334155;
+            height: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            overflow: hidden;
+            border: 1px solid #0f172a;
+        }
+
+        .hp-bar-fill {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            height: 100%;
+            width: 100%;
+            transition: width 0.5s ease-in-out, background-color 0.5s;
+        }
+
+        .hp-bar-fill.warning {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .hp-bar-fill.danger {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+        }
+
+        /* Pijakan (Platform) Arena */
+        .arena-platform {
+            position: absolute;
+            width: 180px;
+            height: 50px;
+            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 70%);
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        .platform-enemy {
+            top: 120px;
+            right: 60px;
+        }
+
+        .platform-player {
+            bottom: 100px;
+            left: 60px;
+        }
+
+        /* Sprite Karakter */
+        .sprite-container {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            font-size: 50px;
+            color: white;
+            z-index: 5;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .sprite-enemy {
+            top: 50px;
+            right: 100px;
+            background: linear-gradient(135deg, #475569, #1e293b);
+        }
+
+        .sprite-player {
+            bottom: 120px;
+            left: 100px;
+            background: linear-gradient(135deg, #475569, #1e293b);
+        }
+
+        /* ANIMASI KEYFRAMES (UNTUK EFEK SERANG & DAMAGE) */
+        @keyframes attack-player {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(150px, -80px) scale(1.2);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        @keyframes attack-enemy {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(-150px, 80px) scale(1.2);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        @keyframes damage-shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+                filter: brightness(1);
+            }
+
+            20% {
+                transform: translateX(-15px) rotate(-5deg);
+                filter: brightness(2) saturate(3) hue-rotate(-50deg);
+            }
+
+            40% {
+                transform: translateX(15px) rotate(5deg);
+            }
+
+            60% {
+                transform: translateX(-15px) rotate(-5deg);
+            }
+
+            80% {
+                transform: translateX(15px) rotate(5deg);
+                filter: brightness(2) saturate(3) hue-rotate(-50deg);
+            }
+        }
+
+        @keyframes faint-drop {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(100px) scale(0.5);
+                opacity: 0;
+            }
+        }
+
+        .anim-attack-player {
+            animation: attack-player 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .anim-attack-enemy {
+            animation: attack-enemy 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .anim-damage {
+            animation: damage-shake 0.5s ease-in-out;
+        }
+
+        .anim-faint {
+            animation: faint-drop 1s forwards;
+        }
+
+        /* Dashboard Bawah */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .battle-log {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            padding: 15px;
+            border-radius: 12px;
+            height: 160px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+
+        .action-panel {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn-action {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            padding: 12px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-action i {
+            font-size: 20px;
+            color: var(--text3);
+            transition: color 0.2s;
+        }
+
+        .btn-action:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3);
+        }
+
+        .btn-action:hover i {
+            color: white;
+        }
+
+        .btn-action.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
     </style>
-    </head>
-    <body data-page="battle">
+</head>
+
+<body data-page="battle">
     <div class="page" id="battle-page">
-    <nav>
-        <div class="nav-logo"><div class="nav-logo-icon">⚔️</div><span class="nav-logo-text">PokéBattle</span></div>
-        <div class="nav-links">
-        <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home" aria-hidden="true"></i> Home</button>
-        <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book" aria-hidden="true"></i> Collection</button>
-        <button class="nav-link active" onclick="goTo('battle')"><i class="ti ti-sword" aria-hidden="true"></i> Battle</button>
-        <button class="nav-link" onclick="goTo('inventory')"><i class="ti ti-package" aria-hidden="true"></i> Inventory</button>
-        </div>
-        <div class="nav-right">
-        <button class="btn-logout" onclick="goTo('login')"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
-        </div>
-    </nav>
-
-    <div class="page-content">
-        
-        <div id="phase-selection" style="display: block;">
-        <div class="page-header">
-            <div class="page-title" style="color:var(--accent)">Deploy Pokémon</div>
-            <div class="page-sub">Pilih satu Pokémon dari koleksimu untuk bertarung!</div>
-        </div>
-        
-        <div class="collection-grid" id="deploy-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
-            <p style="color: var(--text3);">Memuat tim Pokémon...</p>
-        </div>
-        </div>
-
-        <div id="phase-arena" style="display: none;">
-        
-        <div class="battle-arena">
-            <div class="stat-box enemy">
-            <h3 style="margin: 0; color: white;"><span id="enemy-name">Memuat...</span> <span style="font-size: 12px; color: var(--text3);">Musuh</span></h3>
-            <div class="hp-bar-bg"><div class="hp-bar-fill" id="enemy-hp-bar" style="width: 100%;"></div></div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
-                <span>HP</span>
-                <span id="enemy-hp-text">0 / 0</span>
+        <nav>
+            <div class="nav-logo">
+                <div class="nav-logo-icon">⚔️</div><span class="nav-logo-text">PokéBattle</span>
             </div>
+            <div class="nav-links">
+                <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home"></i> Home</button>
+                <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book"></i> Collection</button>
+                <button class="nav-link active" onclick="goTo('battle-ingame')"><i class="ti ti-sword"></i>
+                    Battle</button>
+                <button class="nav-link" onclick="goTo('inventory')"><i class="ti ti-package"></i> Inventory</button>
             </div>
-
-            <div class="stat-box player">
-            <h3 style="margin: 0; color: white;"><span id="player-name">Memuat...</span></h3>
-            <div class="hp-bar-bg"><div class="hp-bar-fill" id="player-hp-bar" style="width: 100%;"></div></div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
-                <span>HP</span>
-                <span id="player-hp-text">0 / 0</span>
+            <div class="nav-right">
+                <button class="btn-logout" onclick="handleLogout()"><i class="ti ti-logout"></i> Logout</button>
             </div>
-            </div>
-        </div>
+        </nav>
 
-        <div class="dashboard">
-            <div class="battle-log" id="battle-log">
-            <p style="color: var(--text3);">Menunggu pertarungan dimulai...</p>
-            </div>
+        <div class="page-content">
 
-            <div class="action-panel">
-            <div class="action-grid" id="menu-main">
-                <button class="btn-action" onclick="toggleMenu('menu-skills')"><i class="ti ti-sword"></i> Attack</button>
-                <button class="btn-action" onclick="toggleMenu('menu-items')"><i class="ti ti-package"></i> Item</button>
-                <button class="btn-action" onclick="executeCatch()"><i class="ti ti-pokeball"></i> Catch</button>
-                <button class="btn-action" onclick="location.reload()"><i class="ti ti-run"></i> Run</button>
-            </div>
-
-            <div class="action-grid" id="menu-skills" style="display: none;">
-                <button class="btn-action" id="btn-skill-1" onclick="executeAttack(1)">Skill Normal</button>
-                <button class="btn-action" id="btn-skill-2" onclick="executeAttack(2)">Skill Elemen 1</button>
-                <button class="btn-action" id="btn-skill-3" onclick="executeAttack(3)">Skill Elemen 2</button>
-                <button class="btn-action" id="btn-skill-4" onclick="executeAttack(4)">Skill Elemen 3</button>
-                <button class="btn-action" style="background: #333; grid-column: span 2;" onclick="toggleMenu('menu-main')">Kembali</button>
-            </div>
-
-            <div class="action-grid" id="menu-items" style="display: none;">
-                <div id="item-list-container" style="grid-column: span 2; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: 100px;">
-                <p style="color: var(--text3); font-size: 12px; text-align: center;">Memuat item...</p>
-                </div>
-                <button class="btn-action" style="background: #333; grid-column: span 2;" onclick="toggleMenu('menu-main')">Kembali</button>
-            </div>
-            </div>
-        </div>
-
-        </div>
-    </div>
-    </div>
-
-    <script>
-        function goTo(page) { window.location.href = '/' + page; }
-
-        function toggleMenu(menuId) {
-            document.getElementById('menu-main').style.display = 'none';
-            document.getElementById('menu-skills').style.display = 'none';
-            document.getElementById('menu-items').style.display = 'none';
-            document.getElementById(menuId).style.display = 'grid';
-        }
-
-        function addLog(text, color = "white") {
-            const logBox = document.getElementById('battle-log');
-            logBox.innerHTML += `<p style="color: ${color};">> ${text}</p>`;
-            logBox.scrollTop = logBox.scrollHeight; 
-        }
-
-        async function loadDeployScreen() {
-            const grid = document.getElementById('deploy-grid');
-            try {
-                const response = await fetch('/api/user/collection');
-                const pokemons = await response.json();
-                grid.innerHTML = '';
-                if(pokemons.length === 0) {
-                grid.innerHTML = '<p>Kamu belum punya Pokemon untuk bertarung!</p>';
-                return;
-                }
-                pokemons.forEach(p => {
-                grid.innerHTML += `
-                    <div class="deploy-card" onclick="startBattlePhase(${p.id})">
-                    <h3 style="color: white; margin-bottom: 5px;">${p.name}</h3>
-                    <p style="font-size: 12px; color: var(--text3);">Lv. ?? | HP: ${p.hp}/${p.max_hp}</p>
+            <div id="phase-selection" style="display: block;">
+                <div class="page-header">
+                    <div class="page-title" style="color:var(--accent)"><i class="ti ti-pokeball"></i> Deploy Pokémon
                     </div>
-                `;
-                });
-            } catch (e) {
-                console.log("Error load deployment", e);
-            }
-        }
+                    <div class="page-sub">Pilih satu Pokémon dari koleksimu untuk bertarung!</div>
+                </div>
 
-        async function startBattlePhase(pokemonId) {
-            document.getElementById('phase-selection').style.display = 'none';
-            document.getElementById('phase-arena').style.display = 'block';
-            addLog("Mengirim Pokémon ke arena...", "var(--accent)");
-            try {
-                const response = await fetch('/api/battle/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ playerPokemonId: pokemonId })
-                });
-                if (!response.ok) throw new Error('Gagal memulai battle');
-                    const data = await response.json();
-                    document.getElementById('enemy-name').textContent = data.enemy.name;
-                    document.getElementById('enemy-hp-text').textContent = data.enemyCurrentHp + ' / ' + data.enemyMaxHp;
-                    document.getElementById('enemy-hp-bar').style.width = '100%';
-                    document.getElementById('player-name').textContent = data.player.name;
-                    document.getElementById('player-hp-text').textContent = data.player.hp + ' / ' + data.player.maxHp;
-                    document.getElementById('player-hp-bar').style.width = '100%';
-                if (data.enemyMoves) {
-                    data.enemyMoves.forEach((move, i) => {
-                        const btn = document.getElementById('btn-skill-' + (i + 1));
-                        if (btn) btn.textContent = move.name + ' (' + move.type + ')';
-                    });
-                }
-                addLog(data.message, "#5eff81");
-            } catch (err) {
-                addLog("Error: " + err.message, "#ff5e5e");
-                console.error(err);
-            }
-        }
+                <div class="collection-grid" id="deploy-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                    <p style="color: var(--text3);">Memuat tim Pokémon...</p>
+                </div>
+            </div>
 
-        // Fungsi untuk fetch daftar item dan menampilkannya di panel item
-        async function loadItemList() {
-            try {
-                const resp = await fetch('/api/user/inventory');
-                const items = await resp.json();
-                const container = document.getElementById('item-list-container');
-                if (!items || items.length === 0) {
-                    container.innerHTML = '<p style="color: var(--text3); text-align: center;">Kamu tidak punya item</p>';
-                    return;
-                }
-                container.innerHTML = items.map(item =>
-                `<button class="btn-action" onclick="executeItem('${item.name}')" style="font-size:12px; padding:5px;">
-                    ${item.name} (x${item.quantity})
-                </button>`
-                ).join('');
-            } catch (e) {
-                console.error("Gagal memuat item", e);
-            }
-        }
+            <div id="phase-arena" style="display: none;">
 
-        // Panggil loadItemList saat membuka menu item
-        function toggleMenu(menuId) {
-            document.getElementById('menu-main').style.display = 'none';
-            document.getElementById('menu-skills').style.display = 'none';
-            document.getElementById('menu-items').style.display = 'none';
-            const menu = document.getElementById(menuId);
-            menu.style.display = 'grid';
-            if (menuId === 'menu-items') loadItemList();
-        }
+                <div class="battle-arena">
+                    <div class="arena-platform platform-enemy"></div>
+                    <div class="arena-platform platform-player"></div>
+                    <div class="sprite-container sprite-enemy" id="sprite-enemy"><i class="ti ti-ghost"
+                            id="icon-enemy"></i></div>
+                    <div class="sprite-container sprite-player" id="sprite-player"><i class="ti ti-brand-snapchat"
+                            id="icon-player"></i></div>
 
-        async function executeAttack(skillSlotIndex) {
-            toggleMenu('menu-main');
-            addLog(`Menyerang dengan skill slot ${skillSlotIndex}...`, "#ffd966");
-            try {
-                const response = await fetch('/api/battle/attack', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ skillSlot: skillSlotIndex })
-                });
-                if (!response.ok) throw new Error('Gagal menyerang');
-                const data = await response.json();
+                    <div class="stat-box enemy">
+                        <h3 style="margin: 0 0 5px 0; color: white; display: flex; justify-content: space-between;">
+                            <span id="enemy-name">Memuat...</span>
+                            <span
+                                style="font-size: 10px; background:#ef4444; padding:2px 6px; border-radius:4px;">Musuh</span>
+                        </h3>
+                        <div class="hp-bar-bg">
+                            <div class="hp-bar-fill" id="enemy-hp-bar" style="width: 100%;"></div>
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; font-weight:bold;">
+                            <span><i class="ti ti-heart"></i> HP</span>
+                            <span id="enemy-hp-text">0 / 0</span>
+                        </div>
+                    </div>
 
-                if (!data.hit) {
-                addLog(data.message || 'Serangan meleset!', '#ff9999');
-                if (data.playerCurrentHp !== undefined) updateBattleUI(data);
-                if (data.enemyAttackMessage) addLog(data.enemyAttackMessage, '#ff9999');
-                // Cek apakah player mati setelah serangan musuh
-                if (data.playerAlive !== undefined && !data.playerAlive) {
-                    addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
-                    document.getElementById('menu-main').style.display = 'none';
-                    setTimeout(() => { window.location.href = '/home'; }, 2000);
-                }
-                return;
-                }
+                    <div class="stat-box player">
+                        <h3 style="margin: 0 0 5px 0; color: white; display: flex; justify-content: space-between;">
+                            <span id="player-name">Memuat...</span>
+                            <span
+                                style="font-size: 10px; background:#3b82f6; padding:2px 6px; border-radius:4px;">Pemain</span>
+                        </h3>
+                        <div class="hp-bar-bg">
+                            <div class="hp-bar-fill" id="player-hp-bar" style="width: 100%;"></div>
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; font-weight:bold;">
+                            <span><i class="ti ti-heart"></i> HP</span>
+                            <span id="player-hp-text">0 / 0</span>
+                        </div>
+                    </div>
+                </div>
 
-                addLog(`Serangan kena! Damage: ${data.damage} (${data.effectiveness})`, '#5eff81');
-                if (data.inflictedStatus) {
-                    addLog(`Musuh terkena status: ${data.inflictedStatus}`, '#cc66ff');
-                }
-                updateBattleUI(data);
+                <div class="dashboard">
+                    <div class="battle-log" id="battle-log">
+                        <p style="color: #94a3b8;">[Sistem] Menunggu pertarungan dimulai...</p>
+                    </div>
 
-                if (!data.enemyAlive) {
-                    addLog('Musuh kalah! 🏆', '#ffd966');
-                document.getElementById('menu-main').style.display = 'none';
-                setTimeout(() => { window.location.href = '/home'; }, 2000);
-                } else {
-                    if (data.enemyAttackMessage) {
-                        addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
-                    }
-                    updateBattleUI(data);
-                    if (data.playerAlive !== undefined && !data.playerAlive) {
-                        addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
-                        document.getElementById('menu-main').style.display = 'none';
-                        setTimeout(() => { window.location.href = '/home'; }, 2000);
-                    }
-                }
-            } catch (err) {
-                addLog('Error: ' + err.message, '#ff5e5e');
-                console.error(err);
-            }
-        }
+                    <div class="action-panel">
+                        <div class="action-grid" id="menu-main">
+                            <button class="btn-action" onclick="toggleMenu('menu-skills')">
+                                <i class="ti ti-sword"></i> Attack
+                            </button>
+                            <button class="btn-action" onclick="toggleMenu('menu-items')">
+                                <i class="ti ti-package"></i> Item
+                            </button>
+                            <button class="btn-action" onclick="executeSwapRandom()" id="btn-menu-swap">
+                                <i class="ti ti-refresh"></i> Swap (3)
+                            </button>
+                            <button class="btn-action" onclick="executeCatch()" id="btn-menu-catch">
+                                <i class="ti ti-pokeball"></i> Catch
+                            </button>
 
-        async function executeItem(itemName) {
-            toggleMenu('menu-main');
-            addLog(`Menggunakan ${itemName}...`, "#ffd966");
-            try {
-                const response = await fetch('/api/battle/item', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ itemName: itemName })
-                });
-                const data = await response.json();
-                if (data.error) {
-                    addLog(data.error, '#ff9999');
-                    return;
-                }
-                addLog(data.message, '#5eff81');
-                
-                // Update HP player setelah heal
-                if (data.playerCurrentHp !== undefined) {
-                    document.getElementById('player-hp-text').textContent = data.playerCurrentHp + ' / ' + data.playerMaxHp;
-                    const pct = (data.playerCurrentHp / data.playerMaxHp * 100);
-                    document.getElementById('player-hp-bar').style.width = pct + '%';
-                }
+                            <button class="btn-action" style="grid-column: span 2; background: #334155;"
+                                onclick="window.location.href='/home'">
+                                <i class="ti ti-run"></i> Run Away
+                            </button>
+                        </div>
 
-                // Jika setelah pakai item musuh menyerang (ada enemyAttackMessage)
-                if (data.enemyAttackMessage) {
-                    addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
-                    updateBattleUI(data); // update HP player setelah diserang
-                    if (data.playerAlive !== undefined && !data.playerAlive) {
-                        addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
-                        document.getElementById('menu-main').style.display = 'none';
-                        setTimeout(() => { window.location.href = '/home'; }, 2000);
-                    }
-                }
-            } catch (err) {
-                addLog('Error: ' + err.message, '#ff5e5e');
-            }
-        }
+                        <div class="action-grid" id="menu-skills" style="display: none;">
+                            <button class="btn-action" id="btn-skill-1" onclick="executeAttack(1)"
+                                style="flex-direction: row;">Skill 1</button>
+                            <button class="btn-action" id="btn-skill-2" onclick="executeAttack(2)"
+                                style="flex-direction: row;">Skill 2</button>
+                            <button class="btn-action" id="btn-skill-3" onclick="executeAttack(3)"
+                                style="flex-direction: row;">Skill 3</button>
+                            <button class="btn-action" id="btn-skill-4" onclick="executeAttack(4)"
+                                style="flex-direction: row;">Skill 4</button>
+                            <button class="btn-action"
+                                style="background: #334155; grid-column: span 2; flex-direction: row;"
+                                onclick="toggleMenu('menu-main')"><i class="ti ti-arrow-left"></i> Kembali</button>
+                        </div>
 
-        async function executeCatch() {
-            addLog("Melempar Pokéball...", "#ffd966");
-            try {
-                const response = await fetch('/api/battle/catch', { method: 'POST' });
-                const data = await response.json();
-                if (data.caught) {
-                    addLog(data.message, '#5eff81');
-                    document.getElementById('menu-main').style.display = 'none';
-                    // Redirect setelah berhasil menangkap
-                    setTimeout(() => { window.location.href = '/home'; }, 2000);
-                } else {
-                    addLog(data.message, '#ff9999');
-                    if (data.enemyAttackMessage) {
-                        addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
-                        updateBattleUI(data);
-                    }
-                    // Cek jika player mati setelah serangan balik
-                    if (data.playerAlive !== undefined && !data.playerAlive) {
-                        addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
-                        document.getElementById('menu-main').style.display = 'none';
-                        setTimeout(() => { window.location.href = '/home'; }, 2000);
-                    }
-                }
-            } catch (err) {
-                addLog('Error: ' + err.message, '#ff5e5e');
-            }
-        }
+                        <div class="action-grid" id="menu-items" style="display: none;">
+                            <div id="item-list-container"
+                                style="grid-column: span 2; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; max-height: 100px;">
+                                <p style="color: var(--text3); font-size: 12px; text-align: center;">Memuat item...</p>
+                            </div>
+                            <button class="btn-action"
+                                style="background: #334155; grid-column: span 2; flex-direction: row;"
+                                onclick="toggleMenu('menu-main')"><i class="ti ti-arrow-left"></i> Kembali</button>
+                        </div>
+                    </div>
+                </div>
 
-        function updateBattleUI(data) {
-            if (data.enemyCurrentHp !== undefined && data.enemyMaxHp) {
-                document.getElementById('enemy-hp-text').textContent = data.enemyCurrentHp + ' / ' + data.enemyMaxHp;
-                const enemyPercent = (data.enemyCurrentHp / data.enemyMaxHp * 100);
-                document.getElementById('enemy-hp-bar').style.width = enemyPercent + '%';
-            }
-            if (data.playerCurrentHp !== undefined && data.playerMaxHp) {
-                document.getElementById('player-hp-text').textContent = data.playerCurrentHp + ' / ' + data.playerMaxHp;
-                const playerPercent = (data.playerCurrentHp / data.playerMaxHp * 100);
-                document.getElementById('player-hp-bar').style.width = playerPercent + '%';
-            }
-        }
+            </div>
+        </div>
+    </div>
 
-        document.addEventListener('DOMContentLoaded', loadDeployScreen);
-    </script>
+    <script src="/js/main.js"></script>
+
 </body>
+
 </html>

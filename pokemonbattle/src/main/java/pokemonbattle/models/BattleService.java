@@ -38,6 +38,7 @@ public class BattleService {
 
     // ==================== STATUS EFFECT MAPPING ====================
     private static final Map<PokemonType, Status> statusMap = new HashMap<>();
+
     static {
         statusMap.put(PokemonType.FIRE, Status.BURN);
         statusMap.put(PokemonType.POISON, Status.POISON);
@@ -50,6 +51,7 @@ public class BattleService {
 
     /**
      * Mengembalikan status yang mungkin dikenakan oleh tipe serangan tertentu.
+     *
      * @param attackType tipe serangan
      * @return Status atau null jika tipe tidak memberikan status
      */
@@ -59,6 +61,7 @@ public class BattleService {
 
     /**
      * Mencoba memberikan status efek setelah serangan kena.
+     *
      * @param attackType tipe serangan yang digunakan
      * @return Status jika berhasil (chance 15%), null jika gagal
      */
@@ -76,13 +79,13 @@ public class BattleService {
             return 1.5;
         }
         if (notEffective.getOrDefault(attackType, Set.of()).contains(defenseType)) {
-            return 0.75;
+            return 0.50;
         }
         return 1.0;
     }
 
     public int calculateDamage(int power, int attackStat, int defenseStat,
-                               PokemonType attackType, PokemonType defenseType) {
+            PokemonType attackType, PokemonType defenseType) {
         double typeMult = getTypeMultiplier(attackType, defenseType);
         double base = power * ((double) attackStat / defenseStat);
         double randomFactor = 0.85 + (random.nextDouble() * 0.15);
@@ -96,25 +99,39 @@ public class BattleService {
 
     public String getEffectivenessText(PokemonType attackType, PokemonType defenseType) {
         double mult = getTypeMultiplier(attackType, defenseType);
-        if (mult > 1.0) return "effective";
-        if (mult < 1.0) return "not_effective";
+        if (mult > 1.0) {
+            return "effective";
+        }
+        if (mult < 1.0) {
+            return "not_effective";
+        }
         return "normal";
     }
 
     /**
-     * Menghitung apakah Pokémon liar berhasil ditangkap.
-     * Rumus sederhana: makin sedikit HP, makin mudah.
-     * chance = (1 - currentHp/maxHp) * 0.5 + 0.1  (min 0.1, max 0.6)
+     * Menghitung apakah Pokémon liar berhasil ditangkap. Rumus sederhana: makin
+     * sedikit HP, makin mudah. chance = (1 - currentHp/maxHp) * 0.5 + 0.1 (min
+     * 0.1, max 0.6)
      */
-    public boolean isCatchSuccessful(int currentHp, int maxHp) {
-        double hpFactor = 1.0 - ((double) currentHp / maxHp);
-        double chance = hpFactor * 0.5 + 0.1;
+    public boolean isCatchSuccessful(int attempt, String rarity) {
+        double chance = 0.40; // Default untuk NORMAL (40%)
+
+        if ("LEGENDARY".equalsIgnoreCase(rarity)) {
+            if (attempt == 1) {
+                chance = 0.15;
+            } else if (attempt == 2) {
+                chance = 0.20;
+            } else {
+                chance = 0.25;
+            }
+        }
+
         return random.nextDouble() < chance;
     }
 
     /**
-     * Mendapatkan damage yang diterima akibat status (per turn).
-     * Hanya BURN dan POISON yang memberi damage.
+     * Mendapatkan damage yang diterima akibat status (per turn). Hanya BURN dan
+     * POISON yang memberi damage.
      */
     public int getStatusDamage(Status status, int maxHp) {
         if (status == Status.BURN || status == Status.POISON) {
