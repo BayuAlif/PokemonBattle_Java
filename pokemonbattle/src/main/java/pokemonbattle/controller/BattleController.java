@@ -41,7 +41,6 @@ public class BattleController {
             return Map.of("error", "Pokémon tidak ditemukan");
         }
 
-        // HP MUSUH DINAIKKAN MENJADI 4 KALI LIPAT (SUSAH/BOSS MODE)
         int enemyMaxHp = (int) (enemy.getMaxHp() * 4.0);
         int enemyCurrentHp = enemyMaxHp;
 
@@ -54,12 +53,11 @@ public class BattleController {
                 enemyCurrentHp, enemyMaxHp
         );
 
-        // Menyimpan data penting ke dalam HTTP Session
         session.setAttribute("battleState", state);
         session.setAttribute("enemyMoves", enemyMoves);
         session.setAttribute("playerMoves", playerMoves);
-        session.setAttribute("pokemonLeft", 3); // Jatah 3 nyawa Pokemon mati
-        session.setAttribute("swapLeft", 3);    // Jatah 3 kali ganti acak manual
+        session.setAttribute("pokemonLeft", 3); 
+        session.setAttribute("swapLeft", 3);    
 
         java.util.List<Integer> faintedPokemonIds = new java.util.ArrayList<>();
         session.setAttribute("faintedPokemonIds", faintedPokemonIds);
@@ -79,7 +77,6 @@ public class BattleController {
     }
 
     // ========== 2. GANTI POKEMON ACAK DI TENGAH BATTLE ==========
-    // ========== 2. GANTI POKEMON ACAK DI TENGAH BATTLE (FIXED) ==========
     @PostMapping("/swap-random")
     @SuppressWarnings("unchecked")
     public Map<String, Object> swapRandom(HttpSession session) {
@@ -96,7 +93,6 @@ public class BattleController {
             return Map.of("error", "Jatah ganti Pokémon acak kamu sudah habis!");
         }
 
-        // Filter query SQL dinamis untuk menolak ID Pokémon aktif saat ini DAN Pokémon yang sudah pingsan
         String queryFilter = " AND p.id != ? ";
         if (faintedPokemonIds != null && !faintedPokemonIds.isEmpty()) {
             for (Integer faintedId : faintedPokemonIds) {
@@ -115,7 +111,7 @@ public class BattleController {
         try (Connection conn = Database.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, username);
-            pstmt.setInt(2, state.getPlayerPokemonId()); // Mengisi tanda tanya (?) pertama di queryFilter
+            pstmt.setInt(2, state.getPlayerPokemonId());
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (!rs.next()) {
@@ -129,12 +125,10 @@ public class BattleController {
                         rs.getString("rarity")
                 );
 
-                // Taruh Pokemon baru ke arena
                 state.setPlayerPokemonId(nextPokemon.getId());
                 state.setPlayerCurrentHp(nextPokemon.getHp());
                 state.setPlayerMaxHp(nextPokemon.getMaxHp());
 
-                // Kurangi jatah kuota swap manual
                 swapLeft--;
                 session.setAttribute("swapLeft", swapLeft);
 
@@ -147,7 +141,6 @@ public class BattleController {
                 resp.put("playerMoves", playerMoves);
                 resp.put("swapLeft", swapLeft);
 
-                // Setelah ganti Pokémon secara manual, musuh langsung memanfaatkan momentum untuk memukul!
                 pokemonDAO.PokemonData enemy = pokemonDAO.getPokemonById(state.getEnemyPokemonId());
                 if (enemy != null) {
                     enemyTurn(state, session, enemy, resp);
@@ -157,28 +150,23 @@ public class BattleController {
 
                     Integer pokemonLeft = (Integer) session.getAttribute("pokemonLeft");
 
-                    // --- MANAJEMEN KEMATIAN POKEMON INSTAN PASCA-SWAP ---
                     if (!state.isPlayerAlive() && pokemonLeft != null) {
-                        // 1. Masukkan Pokemon apes ini ke list fainted
                         if (faintedPokemonIds != null) {
                             faintedPokemonIds.add(state.getPlayerPokemonId());
                             session.setAttribute("faintedPokemonIds", faintedPokemonIds);
                         }
 
                         if (pokemonLeft <= 1) {
-                            // Nyawa tim habis total -> Kalah
                             Map<String, Object> rewardData = updateStats(username, false);
                             resp.put("rewardMessage", rewardData.get("rewardMessage"));
                             session.removeAttribute("battleState");
                         } else {
-                            // Masih ada slot Pokemon sisa -> Kurangi nyawa tim, trigger UI ganti manual gratis
                             pokemonLeft--;
                             session.setAttribute("pokemonLeft", pokemonLeft);
                             resp.put("pokemonLeft", pokemonLeft);
                             resp.put("message", "Kamu menggunakan jatah tukar! Keluar: " + nextPokemon.getName() + ", tapi langsung pingsan dihantam musuh! 💀");
                         }
                     } else {
-                        // Jika selamat hidup, kirim pesan swap normal
                         resp.put("pokemonLeft", pokemonLeft);
                         resp.put("message", "Kamu menggunakan jatah tukar! Keluar secara acak: " + nextPokemon.getName() + "!");
                     }
@@ -193,23 +181,16 @@ public class BattleController {
 
     // ========== 3. DEPLOY POKEMON BARU MANUAL (SAAT MATI) ==========
     @PostMapping("/deploy-next")
-    @SuppressWarnings("unchecked")
     public Map<String, Object> deployNext(@RequestBody StartRequest request, HttpSession session) {
         BattleState state = (BattleState) session.getAttribute("battleState");
         Integer pokemonLeft = (Integer) session.getAttribute("pokemonLeft");
-        List<Integer> faintedPokemonIds = (List<Integer>) session.getAttribute("faintedPokemonIds");
 
         if (state == null || pokemonLeft == null) {
             return Map.of("error", "Tidak ada pertarungan aktif");
         }
-        if (pokemonLeft <= 1) {
-            return Map.of("error", "Kesempatan habis!");
-        }
 
-        // Catat ID Pokémon yang sebelumnya pingsan ke daftar hitam sebelum ditimpa
-        if (faintedPokemonIds != null) {
-            faintedPokemonIds.add(state.getPlayerPokemonId());
-            session.setAttribute("faintedPokemonIds", faintedPokemonIds);
+        if (pokemonLeft < 0) {
+            return Map.of("error", "Kesempatan bertarung tim kamu sudah habis total!");
         }
 
         int nextPokemonId = request.getPlayerPokemonId();
@@ -221,9 +202,6 @@ public class BattleController {
         state.setPlayerPokemonId(nextPokemon.getId());
         state.setPlayerCurrentHp(nextPokemon.getHp());
         state.setPlayerMaxHp(nextPokemon.getMaxHp());
-
-        pokemonLeft--;
-        session.setAttribute("pokemonLeft", pokemonLeft);
 
         List<Skill> playerMoves = pokemonDAO.getRandomEnemyMoves(nextPokemon.getType());
         session.setAttribute("playerMoves", playerMoves);
@@ -256,6 +234,8 @@ public class BattleController {
     public Map<String, Object> attack(@RequestBody AttackRequest request, HttpSession session) {
         BattleState state = (BattleState) session.getAttribute("battleState");
         Integer pokemonLeft = (Integer) session.getAttribute("pokemonLeft");
+        List<Integer> faintedPokemonIds = (List<Integer>) session.getAttribute("faintedPokemonIds");
+
         if (state == null || pokemonLeft == null) {
             return Map.of("error", "Tidak ada pertarungan aktif");
         }
@@ -277,10 +257,10 @@ public class BattleController {
 
         Map<String, Object> resp = new HashMap<>();
 
-        // Meleset
         if (!battleService.isHit(playerSkill.getAccuracy())) {
             resp.put("hit", false);
             resp.put("message", "Serangan meleset!");
+
             enemyTurn(state, session, enemy, resp);
             resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
             resp.put("enemyMaxHp", state.getEnemyMaxHp());
@@ -288,13 +268,24 @@ public class BattleController {
             resp.put("playerMaxHp", state.getPlayerMaxHp());
             resp.put("enemyAlive", state.isEnemyAlive());
             resp.put("playerAlive", state.isPlayerAlive());
-            resp.put("pokemonLeft", pokemonLeft);
 
-            if (!state.isPlayerAlive() && pokemonLeft <= 1) {
-                Map<String, Object> rewardData = updateStats(username, false);
-                resp.put("rewardMessage", rewardData.get("rewardMessage"));
-                session.removeAttribute("battleState");
+            if (!state.isPlayerAlive()) {
+                if (faintedPokemonIds != null && !faintedPokemonIds.contains(state.getPlayerPokemonId())) {
+                    faintedPokemonIds.add(state.getPlayerPokemonId());
+                    session.setAttribute("faintedPokemonIds", faintedPokemonIds);
+                }
+
+                if (pokemonLeft <= 1) {
+                    Map<String, Object> rewardData = updateStats(username, false);
+                    resp.put("rewardMessage", rewardData.get("rewardMessage"));
+                    session.removeAttribute("battleState");
+                } else {
+                    pokemonLeft--;
+                    session.setAttribute("pokemonLeft", pokemonLeft);
+                }
             }
+
+            resp.put("pokemonLeft", pokemonLeft);
             return resp;
         }
 
@@ -316,7 +307,6 @@ public class BattleController {
         resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
         resp.put("enemyMaxHp", state.getEnemyMaxHp());
 
-        // JIKA MUSUH MATI: Pertahankan session agar data /catch tetap valid dibaca
         if (!state.isEnemyAlive()) {
             resp.put("enemyAlive", false);
             resp.put("message", "Musuh kalah!");
@@ -325,6 +315,7 @@ public class BattleController {
             resp.put("playerAlive", true);
             Map<String, Object> rewardData = updateStats(username, true);
             resp.put("rewardMessage", rewardData.get("rewardMessage"));
+            resp.put("pokemonLeft", pokemonLeft);
             return resp;
         }
 
@@ -333,26 +324,39 @@ public class BattleController {
         resp.put("playerMaxHp", state.getPlayerMaxHp());
         resp.put("enemyAlive", true);
         resp.put("playerAlive", state.isPlayerAlive());
-        resp.put("pokemonLeft", pokemonLeft);
 
-        if (!state.isPlayerAlive() && pokemonLeft <= 1) {
-            Map<String, Object> rewardData = updateStats(username, false);
-            resp.put("rewardMessage", rewardData.get("rewardMessage"));
-            session.removeAttribute("battleState");
+        if (!state.isPlayerAlive()) {
+            if (faintedPokemonIds != null && !faintedPokemonIds.contains(state.getPlayerPokemonId())) {
+                faintedPokemonIds.add(state.getPlayerPokemonId());
+                session.setAttribute("faintedPokemonIds", faintedPokemonIds);
+            }
+
+            if (pokemonLeft <= 1) {
+                Map<String, Object> rewardData = updateStats(username, false);
+                resp.put("rewardMessage", rewardData.get("rewardMessage"));
+                session.removeAttribute("battleState");
+            } else {
+                pokemonLeft--;
+                session.setAttribute("pokemonLeft", pokemonLeft);
+            }
         }
+
+        resp.put("pokemonLeft", pokemonLeft);
         return resp;
     }
 
-    // ========== 5. MENGGUNAKAN ITEM (STOK BERKURANG) ==========
+    // ========== 5. MENGGUNAKAN ITEM (DENGAN SINKRONISASI TARGET REVIVE) ==========
     @PostMapping("/item")
+    @SuppressWarnings("unchecked")
     public Map<String, Object> useItem(@RequestBody ItemRequest request, HttpSession session) {
         BattleState state = (BattleState) session.getAttribute("battleState");
         Integer pokemonLeft = (Integer) session.getAttribute("pokemonLeft");
+        List<Integer> faintedPokemonIds = (List<Integer>) session.getAttribute("faintedPokemonIds");
+
         if (state == null || pokemonLeft == null) {
             return Map.of("error", "Tidak ada pertarungan aktif");
         }
 
-        String itemName = request.getItemName();
         String username = (String) session.getAttribute("currentUser");
         if (username == null) {
             return Map.of("error", "Tidak login");
@@ -363,17 +367,21 @@ public class BattleController {
         try (Connection conn = Database.getConnection()) {
             conn.setAutoCommit(false);
 
+            String itemName = request.getItemName(); // Mengambil nama dari JS
+
+            // Cari item berdasarkan NAMA yang dikirim dari JS
             PreparedStatement psItem = conn.prepareStatement("SELECT id, effect_value, type FROM item WHERE name = ?");
             psItem.setString(1, itemName);
             ResultSet rsItem = psItem.executeQuery();
             if (!rsItem.next()) {
-                return Map.of("error", "Item tidak ditemukan");
+                return Map.of("error", "Item tidak ditemukan di database master");
             }
 
             int itemId = rsItem.getInt("id");
             int effect = rsItem.getInt("effect_value");
             String type = rsItem.getString("type");
 
+            // Cek sisa stok di brankas inventory user
             PreparedStatement psInv = conn.prepareStatement(
                     "SELECT ui.quantity, ui.user_id FROM user_inventory ui JOIN users u ON ui.user_id = u.id WHERE u.username = ? AND ui.item_id = ?"
             );
@@ -388,6 +396,7 @@ public class BattleController {
             int currentQty = rsInv.getInt("quantity");
             int userId = rsInv.getInt("user_id");
 
+            // Potong stok inventory berkurang 1
             PreparedStatement psUpdateInv = conn.prepareStatement(
                     "UPDATE user_inventory SET quantity = ? WHERE user_id = ? AND item_id = ?"
             );
@@ -396,10 +405,11 @@ public class BattleController {
             psUpdateInv.setInt(3, itemId);
             psUpdateInv.executeUpdate();
 
+            // Eksekusi Logika Efek Item Berdasarkan Jenis Tipe
             if (type.equals("HEAL")) {
                 if (state.getPlayerCurrentHp() <= 0) {
                     conn.rollback();
-                    return Map.of("error", "Pokémon sudah pingsan! Gunakan Revive.");
+                    return Map.of("error", "Pokémon aktif sudah pingsan! Gunakan Revive.");
                 }
                 int newHp = Math.min(state.getPlayerCurrentHp() + effect, state.getPlayerMaxHp());
                 state.setPlayerCurrentHp(newHp);
@@ -408,17 +418,36 @@ public class BattleController {
                 state.setPlayerStatus(Status.NONE);
                 resp.put("message", "Menggunakan " + itemName + ". Sisa: " + (currentQty - 1) + ". Status negatif pulih!");
             } else if (type.equals("REVIVE")) {
-                if (state.getPlayerCurrentHp() <= 0) {
-                    state.setPlayerCurrentHp(state.getPlayerMaxHp() / 2);
-                    resp.put("message", "Menggunakan Revive! Pokémon bangkit kembali dengan setengah HP!");
-                } else {
+                if (request.getTargetPokemonId() == null) {
                     conn.rollback();
-                    return Map.of("error", "Pokémon kamu belum pingsan, Revive tidak bisa digunakan!");
+                    return Map.of("error", "Pilih Pokémon yang ingin dihidupkan terlebih dahulu!");
                 }
+
+                int targetId = request.getTargetPokemonId();
+
+                if (faintedPokemonIds == null || !faintedPokemonIds.contains(targetId)) {
+                    conn.rollback();
+                    return Map.of("error", "Pokémon target tidak pingsan atau tidak ada di tim!");
+                }
+
+                pokemonDAO.PokemonData revivedPoke = pokemonDAO.getPokemonById(targetId);
+                
+                if (targetId == state.getPlayerPokemonId()) {
+                    state.setPlayerCurrentHp(state.getPlayerMaxHp() / 2);
+                } else {
+                    pokemonLeft++;
+                    session.setAttribute("pokemonLeft", pokemonLeft);
+                }
+
+                faintedPokemonIds.remove(Integer.valueOf(targetId));
+                session.setAttribute("faintedPokemonIds", faintedPokemonIds);
+
+                resp.put("message", "Revive sukses! " + revivedPoke.getName() + " berhasil hidup kembali dengan setengah HP! ❤️");
             }
 
             conn.commit();
 
+            // Setelah menggunakan item, musuh membalas memukul jika pertarungan masih aktif normal
             pokemonDAO.PokemonData enemy = pokemonDAO.getPokemonById(state.getEnemyPokemonId());
             if (enemy != null && state.isEnemyAlive() && state.isPlayerAlive()) {
                 enemyTurn(state, session, enemy, resp);
@@ -428,15 +457,27 @@ public class BattleController {
                 resp.put("enemyMaxHp", state.getEnemyMaxHp());
                 resp.put("enemyAlive", state.isEnemyAlive());
                 resp.put("playerAlive", state.isPlayerAlive());
-                resp.put("pokemonLeft", pokemonLeft);
+                
+                if (!state.isPlayerAlive()) {
+                    if (faintedPokemonIds != null && !faintedPokemonIds.contains(state.getPlayerPokemonId())) {
+                        faintedPokemonIds.add(state.getPlayerPokemonId());
+                        session.setAttribute("faintedPokemonIds", faintedPokemonIds);
+                    }
 
-                if (!state.isPlayerAlive() && pokemonLeft <= 1) {
-                    Map<String, Object> rewardData = updateStats(username, false);
-                    resp.put("rewardMessage", rewardData.get("rewardMessage"));
-                    session.removeAttribute("battleState");
+                    if (pokemonLeft <= 1) {
+                        Map<String, Object> rewardData = updateStats(username, false);
+                        resp.put("rewardMessage", rewardData.get("rewardMessage"));
+                        session.removeAttribute("battleState");
+                    } else {
+                        pokemonLeft--;
+                        session.setAttribute("pokemonLeft", pokemonLeft);
+                    }
                 }
             }
+            
+            resp.put("pokemonLeft", pokemonLeft);
             return resp;
+            
         } catch (Exception e) {
             e.printStackTrace();
             return Map.of("error", "Gagal memproses item");
@@ -477,9 +518,7 @@ public class BattleController {
                         psInsert.setInt(2, state.getEnemyPokemonId());
                         psInsert.executeUpdate();
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+                } catch (Exception e) { e.printStackTrace(); }
             }
             session.removeAttribute("battleState");
             resp.put("caught", true);
@@ -616,47 +655,31 @@ public class BattleController {
         return map;
     }
 
+    // ========== REQUEST MAP DTO OBJECTS ==========
     static class StartRequest {
-
         private int playerPokemonId;
-
-        public int getPlayerPokemonId() {
-            return playerPokemonId;
-        }
-
-        public void setPlayerPokemonId(int playerPokemonId) {
-            this.playerPokemonId = playerPokemonId;
-        }
+        public int getPlayerPokemonId() { return playerPokemonId; }
+        public void setPlayerPokemonId(int playerPokemonId) { this.playerPokemonId = playerPokemonId; }
     }
 
     static class AttackRequest {
-
         private int skillSlot;
-
-        public int getSkillSlot() {
-            return skillSlot;
-        }
+        public int getSkillSlot() { return skillSlot; }
     }
 
-    static class ItemRequest {
+public static class ItemRequest {
+        private String itemName; 
+        private Integer targetPokemonId;
 
-        private String itemName;
-
-        public String getItemName() {
-            return itemName;
-        }
+        public String getItemName() { return itemName; }
+        public void setItemName(String itemName) { this.itemName = itemName; }
+        public Integer getTargetPokemonId() { return targetPokemonId; }
+        public void setTargetPokemonId(Integer targetPokemonId) { this.targetPokemonId = targetPokemonId; }
     }
 
     static class CatchRequest {
-
         private int attempt;
-
-        public int getAttempt() {
-            return attempt;
-        }
-
-        public void setAttempt(int attempt) {
-            this.attempt = attempt;
-        }
+        public int getAttempt() { return attempt; }
+        public void setAttempt(int attempt) { this.attempt = attempt; }
     }
 }

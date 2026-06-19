@@ -680,6 +680,13 @@ async function checkPostActionSurvival(data) {
 }
 
 async function executeItem(itemName) {
+    // 1. Tahan aksi dan buka Popup UI jika yang diklik adalah Revive
+    if (itemName.toLowerCase() === 'revive') {
+        openReviveSelection(itemName);
+        return;
+    }
+
+    // 2. Eksekusi normal untuk Potion / Antidote
     toggleMenu('menu-main');
     lockActionButtons(true);
     addLog(`Menggunakan ${itemName}...`, "#ffd966");
@@ -688,7 +695,7 @@ async function executeItem(itemName) {
         const response = await fetch('/api/battle/item', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ itemName: itemName })
+            body: JSON.stringify({ itemName: itemName }) // Mengirim Nama Item dengan tepat
         });
         const data = await response.json();
         
@@ -697,9 +704,11 @@ async function executeItem(itemName) {
             lockActionButtons(false);
             return;
         }
+        
         addLog(data.message, '#5eff81');
         if (data.playerCurrentHp !== undefined) updateBattleUI(data);
 
+        // Jika musuh membalas serangan
         if (data.enemyAttackMessage) {
             await sleep(500);
             const sprEnemy = document.getElementById('sprite-enemy');
@@ -751,3 +760,101 @@ document.addEventListener("DOMContentLoaded", () => {
         loadDeployScreen();
     }
 });
+
+
+async function executeReviveTarget(itemName, targetPokemonId) {
+    const modal = document.getElementById('revive-modal');
+    if (modal) modal.remove();
+
+    toggleMenu('menu-main');
+    lockActionButtons(true);
+    addLog(`Menggunakan ${itemName}...`, "#ffd966");
+
+    try {
+        const response = await fetch('/api/battle/item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itemName: itemName, targetPokemonId: targetPokemonId }) 
+        });
+        
+        const data = await response.json();
+        if (data.error) {
+            addLog(data.error, '#ff9999');
+            lockActionButtons(false);
+            return;
+        }
+
+        addLog(data.message, '#5eff81');
+        if (data.playerCurrentHp !== undefined) updateBattleUI(data);
+
+        // Jika musuh membalas menyerang pasca-revive
+        if (data.enemyAttackMessage) {
+            await sleep(500);
+            const sprEnemy = document.getElementById('sprite-enemy');
+            const sprPlayer = document.getElementById('sprite-player');
+            
+            if (sprEnemy) sprEnemy.classList.add('anim-attack-enemy');
+            await sleep(300);
+            if (sprPlayer) sprPlayer.classList.add('anim-damage');
+            addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
+            updateBattleUI(data);
+            
+            await sleep(400);
+            if (sprEnemy) sprEnemy.classList.remove('anim-attack-enemy');
+            if (sprPlayer) sprPlayer.classList.remove('anim-damage');
+
+            if (await checkPostActionSurvival(data)) return;
+        }
+    } catch (e) { console.error("Gagal mengeksekusi revive:", e); }
+    lockActionButtons(false);
+}
+
+
+async function openReviveSelection(itemName) {
+    try {
+        const responseFainted = await fetch('/api/battle/fainted-list');
+        const faintedData = await responseFainted.json();
+        const faintedIds = faintedData.faintedIds || [];
+
+        if (faintedIds.length === 0) {
+            alert("Tidak ada Pokémon yang pingsan di tim kamu saat ini!");
+            return;
+        }
+
+        const responseColl = await fetch('/api/user/collection');
+        const allPokemons = await responseColl.json();
+        const deadPokemons = allPokemons.filter(p => faintedIds.includes(p.id));
+
+        let modal = document.getElementById('revive-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'revive-modal';
+            modal.style = "position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;";
+            document.body.appendChild(modal);
+        }
+
+        let optionsHtml = '';
+        deadPokemons.forEach(p => {
+            optionsHtml += `
+                <div class="revive-option-card" 
+                     style="background:#222; border:1px solid #ff5e5e; padding:15px; border-radius:8px; margin-bottom:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; color:white;"
+                     onclick="executeReviveTarget('${itemName}', ${p.id})">
+                    <span><strong>${p.name}</strong> (HP: 0/${p.max_hp})</span>
+                    <button style="background:#ff5e5e; border:none; color:white; padding:5px 12px; border-radius:4px; cursor:pointer;">Pilih</button>
+                </div>
+            `;
+        });
+
+        modal.innerHTML = `
+            <div style="background:#1a1a1a; border:2px solid #ff5e5e; border-radius:12px; padding:25px; width:100%; max-width:400px; box-shadow: 0 0 20px rgba(255,94,94,0.3);">
+                <h3 style="color:#ff5e5e; margin-top:0; margin-bottom:15px; text-align:center;"><i class="ti ti-heart-handshake"></i> Gunakan Revive Pada:</h3>
+                <div style="max-height:250px; overflow-y:auto; margin-bottom:20px;">
+                    ${optionsHtml}
+                </div>
+                <button onclick="document.getElementById('revive-modal').remove()" style="width:100%; background:#444; border:none; color:white; padding:10px; border-radius:6px; cursor:pointer;">Batal</button>
+            </div>
+        `;
+    } catch (e) {
+        console.error("Gagal memuat daftar revive:", e);
+    }
+}
