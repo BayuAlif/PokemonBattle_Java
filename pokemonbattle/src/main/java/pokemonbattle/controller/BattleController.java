@@ -1,16 +1,26 @@
 package pokemonbattle.controller;
 
-import pokemonbattle.database.PokemonDAO;
-import pokemonbattle.database.Database;
-import pokemonbattle.models.*;
-import pokemonbattle.service.BattleService;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
-import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpSession;
-import java.sql.*;
-import java.util.*;
+import pokemonbattle.database.Database;
+import pokemonbattle.database.pokemonDAO;
+import pokemonbattle.models.BattleService;
+import pokemonbattle.models.BattleState;
+import pokemonbattle.models.Skill;
+import pokemonbattle.models.Status;
 
 @RestController
 @RequestMapping("/api/battle")
@@ -23,13 +33,13 @@ public class BattleController {
     @PostMapping("/start")
     public Map<String, Object> startBattle(@RequestBody StartRequest request, HttpSession session) {
         int playerPokemonId = request.getPlayerPokemonId();
-        PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(playerPokemonId);
-        PokemonDAO.PokemonData enemy = PokemonDAO.getRandomPokemon();
+        pokemonDAO.PokemonData player = pokemonDAO.getPokemonById(playerPokemonId);
+        pokemonDAO.PokemonData enemy = pokemonDAO.getRandomPokemon();
         if (player == null || enemy == null) return Map.of("error", "Pokémon tidak ditemukan");
 
         int enemyMaxHp = (int) (enemy.getMaxHp() * 2.5);
         int enemyCurrentHp = enemyMaxHp;
-        List<Skill> enemyMoves = PokemonDAO.getRandomEnemyMoves(enemy.getType());
+        List<Skill> enemyMoves = pokemonDAO.getRandomEnemyMoves(enemy.getType());
 
         BattleState state = new BattleState(
             player.getId(), enemy.getId(),
@@ -63,8 +73,8 @@ public class BattleController {
         if (skillSlot < 1 || skillSlot > 4) return Map.of("error", "Skill tidak valid");
 
         Skill playerSkill = getPlayerSkill(state.getPlayerPokemonId(), skillSlot);
-        PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(state.getPlayerPokemonId());
-        PokemonDAO.PokemonData enemy = PokemonDAO.getPokemonById(state.getEnemyPokemonId());
+        pokemonDAO.PokemonData player = pokemonDAO.getPokemonById(state.getPlayerPokemonId());
+        pokemonDAO.PokemonData enemy = pokemonDAO.getPokemonById(state.getEnemyPokemonId());
 
         if (playerSkill == null || player == null || enemy == null)
             return Map.of("error", "Data tidak lengkap");
@@ -185,7 +195,7 @@ public class BattleController {
             }
 
             // Setelah item digunakan, musuh langsung menyerang balik
-            PokemonDAO.PokemonData enemy = PokemonDAO.getPokemonById(state.getEnemyPokemonId());
+            pokemonDAO.PokemonData enemy = pokemonDAO.getPokemonById(state.getEnemyPokemonId());
             if (enemy != null && state.isEnemyAlive() && state.isPlayerAlive()) {
                 enemyTurn(state, session, enemy, resp);
                 resp.put("playerCurrentHp", state.getPlayerCurrentHp());
@@ -239,7 +249,7 @@ public class BattleController {
         } else {
             resp.put("caught", false);
             resp.put("message", "Gagal menangkap! Pokémon liar menyerang balik.");
-            PokemonDAO.PokemonData enemy = PokemonDAO.getPokemonById(state.getEnemyPokemonId());
+            pokemonDAO.PokemonData enemy = pokemonDAO.getPokemonById(state.getEnemyPokemonId());
             if (enemy != null) {
                 enemyTurn(state, session, enemy, resp);
                 resp.put("playerCurrentHp", state.getPlayerCurrentHp());
@@ -259,7 +269,7 @@ public class BattleController {
 
     // ========== GILIRAN MUSUH ==========
     @SuppressWarnings("unchecked")
-    private void enemyTurn(BattleState state, HttpSession session, PokemonDAO.PokemonData enemy, Map<String, Object> resp) {
+    private void enemyTurn(BattleState state, HttpSession session, pokemonDAO.PokemonData enemy, Map<String, Object> resp) {
         if (!state.isEnemyAlive() || !state.isPlayerAlive()) return;
 
         // Status damage musuh
@@ -285,12 +295,12 @@ public class BattleController {
 
         List<Skill> enemyMoves = (List<Skill>) session.getAttribute("enemyMoves");
         if (enemyMoves == null || enemyMoves.isEmpty()) {
-            enemyMoves = PokemonDAO.getRandomEnemyMoves(enemy.getType());
+            enemyMoves = pokemonDAO.getRandomEnemyMoves(enemy.getType());
             session.setAttribute("enemyMoves", enemyMoves);
         }
         Skill enemySkill = enemyMoves.get(new Random().nextInt(enemyMoves.size()));
 
-        PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(state.getPlayerPokemonId());
+        pokemonDAO.PokemonData player = pokemonDAO.getPokemonById(state.getPlayerPokemonId());
         if (player == null) return;
 
         int rawDamage = battleService.calculateDamage(
@@ -328,13 +338,13 @@ public class BattleController {
 
     // ========== HELPER ==========
     private Skill getPlayerSkill(int playerPokemonId, int slot) {
-        PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(playerPokemonId);
+        pokemonDAO.PokemonData player = pokemonDAO.getPokemonById(playerPokemonId);
         if (player == null) return null;
-        List<Skill> moves = PokemonDAO.getRandomEnemyMoves(player.getType());
+        List<Skill> moves = pokemonDAO.getRandomEnemyMoves(player.getType());
         return (moves.size() >= slot) ? moves.get(slot - 1) : null;
     }
 
-    private Map<String, Object> pokemonToMap(PokemonDAO.PokemonData p) {
+    private Map<String, Object> pokemonToMap(pokemonDAO.PokemonData p) {
         Map<String, Object> map = new HashMap<>();
         map.put("id", p.getId());
         map.put("name", p.getName());

@@ -1,8 +1,9 @@
-package pokemonbattle.service;
+package pokemonbattle.models;
 
-import pokemonbattle.models.PokemonType;
-import pokemonbattle.models.Status;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 

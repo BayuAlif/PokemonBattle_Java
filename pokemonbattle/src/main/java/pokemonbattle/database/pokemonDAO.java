@@ -1,13 +1,17 @@
 package pokemonbattle.database;
 
-import pokemonbattle.models.PokemonType;
-import pokemonbattle.models.Skill;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PokemonDAO {
+import pokemonbattle.models.PokemonType;
+import pokemonbattle.models.Skill;
+
+public class pokemonDAO {
 
     // Mengambil Pokémon berdasarkan ID (join ke types untuk ambil nama tipe)
     public static PokemonData getPokemonById(int pokemonId) {
