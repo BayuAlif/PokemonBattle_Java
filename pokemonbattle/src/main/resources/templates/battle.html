@@ -292,10 +292,23 @@
                     return;
                 }
                 addLog(data.message, '#5eff81');
+                
+                // Update HP player setelah heal
                 if (data.playerCurrentHp !== undefined) {
                     document.getElementById('player-hp-text').textContent = data.playerCurrentHp + ' / ' + data.playerMaxHp;
                     const pct = (data.playerCurrentHp / data.playerMaxHp * 100);
                     document.getElementById('player-hp-bar').style.width = pct + '%';
+                }
+
+                // Jika setelah pakai item musuh menyerang (ada enemyAttackMessage)
+                if (data.enemyAttackMessage) {
+                    addLog(data.enemyAttackMessage + ' Damage: ' + (data.enemyAttackDamage || 0), '#ff9999');
+                    updateBattleUI(data); // update HP player setelah diserang
+                    if (data.playerAlive !== undefined && !data.playerAlive) {
+                        addLog('Pokémonmu pingsan... 💀', '#ff5e5e');
+                        document.getElementById('menu-main').style.display = 'none';
+                        setTimeout(() => { window.location.href = '/home'; }, 2000);
+                    }
                 }
             } catch (err) {
                 addLog('Error: ' + err.message, '#ff5e5e');

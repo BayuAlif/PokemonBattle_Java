@@ -56,6 +56,9 @@ public class BattleController {
         BattleState state = (BattleState) session.getAttribute("battleState");
         if (state == null) return Map.of("error", "Tidak ada pertarungan aktif");
 
+        String username = (String) session.getAttribute("currentUser");
+        if (username == null) return Map.of("error", "Tidak login");
+
         int skillSlot = request.getSkillSlot();
         if (skillSlot < 1 || skillSlot > 4) return Map.of("error", "Skill tidak valid");
 
@@ -72,16 +75,18 @@ public class BattleController {
         if (!battleService.isHit(playerSkill.getAccuracy())) {
             resp.put("hit", false);
             resp.put("message", "Serangan meleset!");
-            // tetap panggil enemyTurn agar musuh jalan
             enemyTurn(state, session, enemy, resp);
-            // selalu kirim HP terbaru
             resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
             resp.put("enemyMaxHp", state.getEnemyMaxHp());
             resp.put("playerCurrentHp", state.getPlayerCurrentHp());
             resp.put("playerMaxHp", state.getPlayerMaxHp());
-            // 🔥 TAMBAHKAN INI: status hidup
             resp.put("enemyAlive", state.isEnemyAlive());
             resp.put("playerAlive", state.isPlayerAlive());
+
+            if (!state.isPlayerAlive()) {
+                updateStats(username, false);
+                session.removeAttribute("battleState");
+            }
             return resp;
         }
 
@@ -108,18 +113,22 @@ public class BattleController {
             resp.put("playerCurrentHp", state.getPlayerCurrentHp());
             resp.put("playerMaxHp", state.getPlayerMaxHp());
             resp.put("playerAlive", true);
+            updateStats(username, true);
             session.removeAttribute("battleState");
             return resp;
         }
 
         // Giliran musuh
         enemyTurn(state, session, enemy, resp);
-        // Selalu kirim data HP terbaru setelah musuh menyerang
         resp.put("playerCurrentHp", state.getPlayerCurrentHp());
         resp.put("playerMaxHp", state.getPlayerMaxHp());
-        // 🔥 TAMBAHKAN: status hidup (enemy pasti hidup karena sudah dicek di atas)
         resp.put("enemyAlive", true);
         resp.put("playerAlive", state.isPlayerAlive());
+
+        if (!state.isPlayerAlive()) {
+            updateStats(username, false);
+            session.removeAttribute("battleState");
+        }
         return resp;
     }
 
@@ -133,6 +142,8 @@ public class BattleController {
         String username = (String) session.getAttribute("currentUser");
         if (username == null) return Map.of("error", "Tidak login");
 
+        Map<String, Object> resp = new HashMap<>();
+
         try (Connection conn = Database.getConnection()) {
             PreparedStatement psItem = conn.prepareStatement("SELECT id, effect_value, type FROM item WHERE name = ?");
             psItem.setString(1, itemName);
@@ -143,7 +154,7 @@ public class BattleController {
             int effect = rsItem.getInt("effect_value");
             String type = rsItem.getString("type");
 
-            // Cek kuantitas
+            // Cek ketersediaan item (tapi tidak akan dikurangi)
             PreparedStatement psInv = conn.prepareStatement(
                 "SELECT ui.quantity FROM user_inventory ui JOIN users u ON ui.user_id = u.id WHERE u.username = ? AND ui.item_id = ?"
             );
@@ -154,25 +165,41 @@ public class BattleController {
                 return Map.of("error", "Item tidak tersedia");
             }
 
-            // Kurangi quantity
-            PreparedStatement psUpdate = conn.prepareStatement(
-                "UPDATE user_inventory SET quantity = quantity - 1 WHERE user_id = (SELECT id FROM users WHERE username = ?) AND item_id = ?"
-            );
-            psUpdate.setString(1, username);
-            psUpdate.setInt(2, itemId);
-            psUpdate.executeUpdate();
+            // ===== BAGIAN PENGURANGAN STOK DIHILANGKAN =====
+            // Tidak jadi update database agar item tidak hilang permanen
+            // nanti setelah battle selesai, stok tetap utuh
 
+            // Terapkan efek item
             if (type.equals("HEAL")) {
                 int newHp = Math.min(state.getPlayerCurrentHp() + effect, state.getPlayerMaxHp());
                 state.setPlayerCurrentHp(newHp);
-                return Map.of("message", "Menggunakan " + itemName + " memulihkan " + effect + " HP!",
-                              "playerCurrentHp", newHp, "playerMaxHp", state.getPlayerMaxHp());
+                resp.put("message", "Menggunakan " + itemName + " memulihkan " + effect + " HP!");
+                resp.put("playerCurrentHp", newHp);
+                resp.put("playerMaxHp", state.getPlayerMaxHp());
             } else if (type.equals("CURE")) {
                 state.setPlayerStatus(Status.NONE);
-                return Map.of("message", "Menggunakan " + itemName + " menyembuhkan status!",
-                              "playerStatus", "NONE");
+                resp.put("message", "Menggunakan " + itemName + " menyembuhkan status!");
+                resp.put("playerStatus", "NONE");
+            } else {
+                resp.put("message", "Item " + itemName + " digunakan, tetapi tidak ada efek langsung.");
             }
-            return Map.of("message", "Item " + itemName + " digunakan, tetapi tidak ada efek langsung.");
+
+            // Setelah item digunakan, musuh langsung menyerang balik
+            PokemonDAO.PokemonData enemy = PokemonDAO.getPokemonById(state.getEnemyPokemonId());
+            if (enemy != null && state.isEnemyAlive() && state.isPlayerAlive()) {
+                enemyTurn(state, session, enemy, resp);
+                resp.put("playerCurrentHp", state.getPlayerCurrentHp());
+                resp.put("playerMaxHp", state.getPlayerMaxHp());
+                resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
+                resp.put("enemyMaxHp", state.getEnemyMaxHp());
+                resp.put("enemyAlive", state.isEnemyAlive());
+                resp.put("playerAlive", state.isPlayerAlive());
+                if (!state.isPlayerAlive()) {
+                    updateStats(username, false);
+                    session.removeAttribute("battleState");
+                }
+            }
+            return resp;
         } catch (Exception e) {
             e.printStackTrace();
             return Map.of("error", "Gagal menggunakan item");
@@ -185,11 +212,11 @@ public class BattleController {
         BattleState state = (BattleState) session.getAttribute("battleState");
         if (state == null) return Map.of("error", "Tidak ada pertarungan aktif");
 
+        String username = (String) session.getAttribute("currentUser");
         boolean success = battleService.isCatchSuccessful(state.getEnemyCurrentHp(), state.getEnemyMaxHp());
         Map<String, Object> resp = new HashMap<>();
 
         if (success) {
-            String username = (String) session.getAttribute("currentUser");
             if (username != null) {
                 try (Connection conn = Database.getConnection()) {
                     PreparedStatement psUser = conn.prepareStatement("SELECT id FROM users WHERE username = ?");
@@ -204,10 +231,10 @@ public class BattleController {
                     }
                 } catch (Exception e) { e.printStackTrace(); }
             }
+            updateStats(username, true);
             session.removeAttribute("battleState");
             resp.put("caught", true);
             resp.put("message", "Berhasil menangkap Pokémon liar!");
-            // 🔥 TAMBAHKAN: battle selesai, bisa redirect
             resp.put("battleEnd", true);
         } else {
             resp.put("caught", false);
@@ -215,15 +242,17 @@ public class BattleController {
             PokemonDAO.PokemonData enemy = PokemonDAO.getPokemonById(state.getEnemyPokemonId());
             if (enemy != null) {
                 enemyTurn(state, session, enemy, resp);
+                resp.put("playerCurrentHp", state.getPlayerCurrentHp());
+                resp.put("playerMaxHp", state.getPlayerMaxHp());
+                resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
+                resp.put("enemyMaxHp", state.getEnemyMaxHp());
+                resp.put("enemyAlive", state.isEnemyAlive());
+                resp.put("playerAlive", state.isPlayerAlive());
+                if (!state.isPlayerAlive()) {
+                    updateStats(username, false);
+                    session.removeAttribute("battleState");
+                }
             }
-            // Kirim HP terbaru setelah serangan musuh
-            resp.put("playerCurrentHp", state.getPlayerCurrentHp());
-            resp.put("playerMaxHp", state.getPlayerMaxHp());
-            resp.put("enemyCurrentHp", state.getEnemyCurrentHp());
-            resp.put("enemyMaxHp", state.getEnemyMaxHp());
-            // 🔥 TAMBAHKAN: status hidup
-            resp.put("enemyAlive", state.isEnemyAlive());
-            resp.put("playerAlive", state.isPlayerAlive());
         }
         return resp;
     }
@@ -264,10 +293,12 @@ public class BattleController {
         PokemonDAO.PokemonData player = PokemonDAO.getPokemonById(state.getPlayerPokemonId());
         if (player == null) return;
 
-        int damage = battleService.calculateDamage(
+        int rawDamage = battleService.calculateDamage(
             enemySkill.getPower(), enemy.getAttack(), player.getDefense(),
             enemySkill.getType(), player.getType()
         );
+        // Damage musuh dikurangi setengah agar tidak overpower
+        int damage = (int) (rawDamage * 0.3);
         state.reducePlayerHp(damage);
 
         resp.put("enemyAttackMessage", "Musuh menggunakan " + enemySkill.getName() + "!");
@@ -278,7 +309,20 @@ public class BattleController {
         if (!state.isPlayerAlive()) {
             resp.put("playerAlive", false);
             resp.put("message", "Pokémonmu kalah...");
-            session.removeAttribute("battleState");
+            // session.removeAttribute("battleState") akan dipanggil di pemanggil
+        }
+    }
+
+    // ========== UPDATE STATISTIK ==========
+    private void updateStats(String username, boolean isWin) {
+        String column = isWin ? "wins" : "losses";
+        String sql = "UPDATE users SET " + column + " = " + column + " + 1 WHERE username = ?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
