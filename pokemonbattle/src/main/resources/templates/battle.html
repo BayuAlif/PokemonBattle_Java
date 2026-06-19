@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PokéBattle - Arena Pertarungan</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <style>
+    .battle-arena {
+      background: linear-gradient(to bottom, #2b3a4a, #1a2530);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      height: 350px;
+      position: relative;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .stat-box {
+      background: rgba(20, 20, 20, 0.8);
+      border: 1px solid #444;
+      padding: 15px;
+      border-radius: 10px;
+      width: 250px;
+      position: absolute;
+    }
+    .stat-box.enemy { top: 20px; right: 20px; }
+    .stat-box.player { bottom: 20px; left: 20px; }
+    
+    .hp-bar-bg {
+      background: #333;
+      height: 10px;
+      border-radius: 5px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+    .hp-bar-fill {
+      background: #5eff81; /* Hijau kalau penuh */
+      height: 100%;
+      width: 100%; /* Ubah persentase ini nanti lewat JS */
+      transition: width 0.3s;
+    }
+    
+    .dashboard {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+    .battle-log {
+      background: rgba(30, 30, 30, 0.6);
+      border: 1px solid #444;
+      padding: 15px;
+      border-radius: 12px;
+      height: 160px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 14px;
+      color: #ddd;
+    }
+    .battle-log p { margin: 0 0 8px 0; }
+    
+    .action-panel {
+      background: rgba(30, 30, 30, 0.6);
+      border: 1px solid var(--accent);
+      padding: 15px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      height: 100%;
+    }
+    .btn-action {
+      background: #222;
+      border: 1px solid #555;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    .btn-action:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body data-page="battle">
+<div class="page" id="battle-page">
+  <nav>
+    <div class="nav-logo"><div class="nav-logo-icon">⚔️</div><span class="nav-logo-text">PokéBattle</span></div>
+    <div class="nav-links">
+      <button class="nav-link" onclick="goTo('home')"><i class="ti ti-home" aria-hidden="true"></i> Home</button>
+      <button class="nav-link" onclick="goTo('collection')"><i class="ti ti-book" aria-hidden="true"></i> Collection</button>
+      <button class="nav-link active" onclick="goTo('battle')"><i class="ti ti-sword" aria-hidden="true"></i> Battle</button>
+      <button class="nav-link" onclick="goTo('inventory')"><i class="ti ti-package" aria-hidden="true"></i> Inventory</button>
+    </div>
+    <div class="nav-right">
+      <button class="btn-logout" onclick="goTo('login')"><i class="ti ti-logout" aria-hidden="true"></i> Logout</button>
+    </div>
+  </nav>
+
+  <div class="page-content">
+    
+    <div class="battle-arena">
+      <div class="stat-box enemy">
+        <h3 style="margin: 0; color: white;">Wild Charizard <span style="font-size: 12px; color: var(--text3);">Lv. 50</span></h3>
+        <div class="hp-bar-bg"><div class="hp-bar-fill" style="width: 100%;"></div></div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
+          <span>HP</span>
+          <span>140 / 140</span>
+        </div>
+        <i class="ti ti-flame" style="position: absolute; top: 15px; right: -40px; font-size: 60px; color: #ff5e5e; opacity: 0.5;"></i>
+      </div>
+
+      <div class="stat-box player">
+        <h3 style="margin: 0; color: white;">Blastoise <span style="font-size: 12px; color: var(--text3);">Lv. 52</span></h3>
+        <div class="hp-bar-bg"><div class="hp-bar-fill" style="width: 80%; background: #f5d44f;"></div></div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text3);">
+          <span>HP</span>
+          <span>112 / 140</span>
+        </div>
+        <i class="ti ti-droplet" style="position: absolute; top: 15px; right: -40px; font-size: 60px; color: #5e81ff; opacity: 0.5;"></i>
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <div class="battle-log" id="battle-log">
+        <p style="color: var(--text3);">Menunggu pertarungan dimulai...</p>
+      </div>
+
+      <div class="action-panel">
+        
+        <div class="action-grid" id="menu-main">
+          <button class="btn-action" onclick="toggleMenu('menu-skills')"><i class="ti ti-sword"></i> Attack</button>
+          <button class="btn-action" onclick="toggleMenu('menu-items')"><i class="ti ti-package"></i> Item</button>
+          <button class="btn-action" onclick="catchAction()"><i class="ti ti-pokeball"></i> Catch (3)</button>
+          <button class="btn-action" onclick="goTo('home')"><i class="ti ti-run"></i> Run</button>
+        </div>
+
+        <div class="action-grid" id="menu-skills" style="display: none;">
+          <button class="btn-action" style="border-color: #5e81ff;" onclick="attackAction('Hydro Pump')">Hydro Pump</button>
+          <button class="btn-action" style="border-color: #5e81ff;" onclick="attackAction('Surf')">Surf</button>
+          <button class="btn-action" style="border-color: #777;" onclick="attackAction('Tackle')">Tackle</button>
+          <button class="btn-action" style="background: #333;" onclick="toggleMenu('menu-main')">Batal</button>
+        </div>
+
+        <div class="action-grid" id="menu-items" style="display: none;">
+          <button class="btn-action" onclick="itemAction('Potion')">Potion (x10)</button>
+          <button class="btn-action" onclick="itemAction('Revive')">Revive (x5)</button>
+          <button class="btn-action" style="background: #333; grid-column: span 2;" onclick="toggleMenu('menu-main')">Batal</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function goTo(page) { window.location.href = '/' + page; }
+
+  // Fungsi untuk ganti menu di UI
+  function toggleMenu(menuId) {
+    document.getElementById('menu-main').style.display = 'none';
+    document.getElementById('menu-skills').style.display = 'none';
+    document.getElementById('menu-items').style.display = 'none';
+    
+    document.getElementById(menuId).style.display = 'grid';
+  }
+
+  // Tambah teks ke log pertarungan
+  function addLog(text, color = "white") {
+    const logBox = document.getElementById('battle-log');
+    logBox.innerHTML += `<p style="color: ${color};">> ${text}</p>`;
+    logBox.scrollTop = logBox.scrollHeight; // Auto scroll ke bawah
+  }
+
+  // Aksi Simulasi UI
+  function attackAction(skillName) {
+    addLog(`Blastoise menggunakan ${skillName}!`);
+    toggleMenu('menu-main');
+    // Nanti kawanmu akan pasang fetch() ke backend di sini
+  }
+
+  function itemAction(itemName) {
+    addLog(`Player menggunakan ${itemName}!`);
+    toggleMenu('menu-main');
+  }
+
+  function catchAction() {
+    addLog(`Player melempar Pokeball...`);
+    // Simulasi logika indikator tangkap di Java kamu: (enemy.getHpRatio() <= 0.2)
+    setTimeout(() => { addLog("Wild Charizard terlepas dari bola!", "#ff5e5e"); }, 1000);
+  }
+</script>
+</body>
+</html>

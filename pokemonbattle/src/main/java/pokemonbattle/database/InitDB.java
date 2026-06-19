@@ -80,7 +80,7 @@ public class InitDB {
             ResultSet rsTypes = stmt.executeQuery("SELECT COUNT(*) FROM types");
             if (rsTypes.next() && rsTypes.getInt(1) == 0) {
                 System.out.println(">>> Mengisi database dengan Master Tipe Elemen... <<<");
-                String[] typeNames = {"FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "POISON"};
+                String[] typeNames = {"FIRE", "WATER", "GRASS", "ELECTRIC", "ICE", "POISON", "NORMAL"};
                 try (PreparedStatement pt = conn.prepareStatement("INSERT INTO types (name) VALUES (?)")) {
                     for (String t : typeNames) {
                         pt.setString(1, t);
@@ -274,7 +274,14 @@ public class InitDB {
                         {"Venoshock","POISON",65,100}, {"Acid","POISON",40,100}, {"Acid Spray","POISON",40,100}, 
                         {"Belch","POISON",120,90}, {"Smog","POISON",30,70}, {"Poison Tail","POISON",50,100}, 
                         {"Gastro Acid","POISON",40,100}, {"Mortal Spin","POISON",30,100}, {"Shell Side Arm","POISON",90,100}, 
-                        {"Dire Claw","POISON",80,100}, {"Venom Drench","POISON",60,100}
+                        {"Dire Claw","POISON",80,100}, {"Venom Drench","POISON",60,100},
+                        {"Tackle","NORMAL",40,100}, {"Scratch","NORMAL",40,100}, {"Quick Attack","NORMAL",40,100},
+                        {"Slam","NORMAL",80,75}, {"Body Slam","NORMAL",85,100}, {"Take Down","NORMAL",90,85},
+                        {"Double-Edge","NORMAL",120,100}, {"Hyper Voice","NORMAL",90,100}, {"Headbutt","NORMAL",70,100},
+                        {"Strength","NORMAL",80,100}, {"Mega Punch","NORMAL",80,85}, {"Mega Kick","NORMAL",120,75},
+                        {"Giga Impact","NORMAL",150,90}, {"Hyper Beam","NORMAL",150,90}, {"Rapid Spin","NORMAL",50,100},
+                        {"Cut","NORMAL",50,95}, {"Slash","NORMAL",70,100}, {"Crush Claw","NORMAL",75,95},
+                        {"Facade","NORMAL",70,100}, {"Return","NORMAL",102,100}
                     };
                     for (Object[] s : skillData) {
                         pstmtSkill.setString(1, (String) s[0]);
